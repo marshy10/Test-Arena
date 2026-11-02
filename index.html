@@ -31,7 +31,7 @@
   --accent-shu-t8:rgba(242,70,46,.08); --accent-shu-t10:rgba(242,70,46,.10);
   --accent-shu-t16:rgba(242,70,46,.16); --accent-shu-glow:rgba(242,70,46,.40);
   --accent-kin-t16:rgba(232,194,90,.16); --accent-kin-glow:rgba(232,194,90,.40);
-  --accent-hisui-t16:rgba(74,222,154,.16); --accent-hisui-glow:rgba(74,222,154,.40);
+  --accent-hisui-t10:rgba(74,222,154,.10); --accent-hisui-t16:rgba(74,222,154,.16); --accent-hisui-glow:rgba(74,222,154,.40);
   --accent-fuji-t8:rgba(155,135,245,.08); --accent-fuji-t16:rgba(155,135,245,.16);
   --accent-warn-t16:rgba(245,165,36,.16);
   --text-2-t16:rgba(163,171,186,.16);
@@ -290,6 +290,7 @@ svg.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-widt
 select.input{appearance:none;-webkit-appearance:none;padding-right:var(--space-6);cursor:pointer}
 .select-wrap{position:relative;display:block}
 .select-wrap .chev{position:absolute;right:var(--space-3);top:var(--space-3);pointer-events:none;color:var(--text-2)}
+.error[hidden]{display:none}
 .error{display:flex;align-items:center;gap:var(--space-1);color:var(--accent-warn);font-size:var(--fs-caption);line-height:var(--lh-caption)}
 
 /* segmented control (§5.4) */
@@ -332,7 +333,7 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:var(--space-6
   .cards{grid-template-columns:1fr}
   .lobby-grid{gap:var(--space-5)}
   .seg{display:grid;width:100%}
-  .seg button{padding:0 var(--space-2)}
+  .seg button{padding:var(--space-1) var(--space-2);white-space:normal;line-height:var(--lh-caption);min-width:0}
   .input{max-width:none}
   .lobby-actions{position:sticky;bottom:0;margin:var(--space-6) calc(-1 * var(--gutter)) 0;padding:var(--space-4) var(--gutter);background:var(--bg-1);border-top:1px solid var(--line-1);z-index:var(--z-sticky)}
   .lobby-actions .btn-hero{flex:1}
@@ -615,6 +616,142 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:var(--space-6
 .debug{position:fixed;right:var(--space-2);bottom:var(--space-2);z-index:var(--z-tooltip);padding:var(--space-2) var(--space-3);background:var(--bg-glass);border:1px solid var(--line-1);font-family:var(--font-mono);font-size:var(--fs-caption);line-height:var(--lh-caption);color:var(--text-2);pointer-events:none;white-space:pre}
 
 /* ============================================================
+   PROCEDURE LADDER — level cards, connector, coverage, clear mark
+   ============================================================ */
+.cards-label{display:flex;align-items:baseline;gap:var(--space-3)}
+#cards-field.xfade .cards{animation:fadeIn var(--dur-base) var(--ease-out) both}
+.card.level{position:relative}
+.lvl-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);width:100%}
+.lvl-num{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;--cut:var(--cut-s);--cb:var(--line-2);--cf:var(--bg-1);
+  font-family:var(--font-display);font-size:var(--fs-h2);line-height:var(--lh-h2);font-weight:500;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.card.level .model{color:var(--accent-fuji)}
+.lock-row{display:inline-flex;align-items:center;gap:var(--space-1);color:var(--text-2)}
+.card.level[aria-disabled="true"]{cursor:not-allowed}
+.card.level[aria-disabled="true"] > :not(.lock-row):not(.conn):not(.lvl-head){opacity:.4}
+.card.level[aria-disabled="true"] .lvl-num{opacity:.4}
+@media (hover:hover){.card.level[aria-disabled="true"]:hover{--cb:var(--line-1);transform:none}}
+.card.level[aria-disabled="true"]:active{transform:none}
+.card.level[aria-disabled="true"]:focus-visible{--cb:var(--line-1)}
+.card.level .lock-badge{margin-left:auto}
+/* connector: joins the level number badges in order (§4.7) */
+.conn{position:absolute;pointer-events:none;background:var(--line-2);left:100%;top:calc(var(--space-4) + 16px);width:var(--space-5);height:1px;transform-origin:left}
+.conn.done{background:var(--accent-hisui)}
+.conn.dashed{background:repeating-linear-gradient(90deg,var(--line-2) 0 4px,transparent 4px 8px)}
+.conn.draw{background:var(--accent-hisui);animation:connX var(--dur-base) var(--ease-out) both}
+@keyframes connX{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes connY{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.card.level.unlocking{animation:unlockGlow var(--dur-base) var(--ease-out) var(--dur-fast) both}
+.card.level.unlocking .lock-badge svg{animation:fadeIn var(--dur-fast) var(--ease-out) both}
+@keyframes unlockGlow{0%{--cb:var(--line-1)}50%{--cb:var(--accent-primary-t60)}100%{--cb:var(--line-1)}}
+@media (max-width:1279px){
+  .cards.ladder .card:nth-child(3){grid-column:2;grid-row:2}
+  .cards.ladder .card:nth-child(4){grid-column:1;grid-row:2}
+  .cards.ladder .card:nth-child(2) .conn{left:calc(var(--space-4) + 16px);top:100%;width:1px;height:var(--space-5);transform-origin:top}
+  .cards.ladder .card:nth-child(2) .conn.dashed{background:repeating-linear-gradient(180deg,var(--line-2) 0 4px,transparent 4px 8px)}
+  .cards.ladder .card:nth-child(2) .conn.draw{animation-name:connY}
+  .cards.ladder .card:nth-child(3) .conn{left:auto;right:100%;transform-origin:right}
+}
+@media (max-width:767px){
+  .cards.ladder .card:nth-child(n){grid-column:auto;grid-row:auto}
+  .cards.ladder .card:nth-child(n) .conn{left:calc(var(--space-4) + 16px);right:auto;top:100%;width:1px;height:var(--space-5);transform-origin:top}
+  .cards.ladder .card:nth-child(n) .conn.dashed{background:repeating-linear-gradient(180deg,var(--line-2) 0 4px,transparent 4px 8px)}
+  .cards.ladder .card:nth-child(n) .conn.draw{animation-name:connY}
+}
+/* briefing: game model + branch set */
+.model-name{margin-bottom:var(--space-2)}
+.model-exp{color:var(--text-2);max-width:72ch}
+.branch-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-5);margin-bottom:var(--space-2)}
+.branches li{border-top:1px solid var(--line-1)}
+.branches li:first-child{border-top:0}
+.br-row{display:grid;grid-template-columns:auto 1fr auto;gap:var(--space-3);align-items:center;width:100%;min-height:36px;padding:var(--space-1) var(--space-2);border:0;background:none;text-align:left;cursor:pointer;color:var(--text-1);border-radius:var(--radius-1);box-shadow:none;transition:background-color var(--dur-fast) var(--ease-out)}
+@media (hover:hover){.br-row:hover{background:var(--bg-3)}}
+.br-row:focus-visible{background:var(--bg-3)}
+.br-row[aria-pressed="true"]{background:var(--bg-3);box-shadow:inset 2px 0 0 var(--accent-primary)}
+.clear-rule{display:flex;flex-direction:column;gap:var(--space-1);margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--line-1)}
+@media (max-width:767px){ .branches:not(.expanded) li:nth-child(n+5){display:none} }
+/* arena: branch coverage */
+.ah-cov{display:flex;flex-direction:column;min-width:160px}
+.cov-bar{position:relative;display:block;height:4px;margin-top:var(--space-1);background:var(--line-1);overflow:hidden}
+.cov-fill{position:absolute;inset:0;background:var(--accent-hisui);transform:scaleX(0);transform-origin:left;transition:transform var(--dur-base) var(--ease-out)}
+.ah-cov.flash .cov-bar{animation:covFlash var(--dur-fast) var(--ease-out)}
+@keyframes covFlash{0%{box-shadow:0 0 0 1px var(--accent-hisui-glow)}100%{box-shadow:none}}
+@media (max-width:767px){ .ah-cov .cov-n{display:none} .ah-cov{min-width:0} }
+.cohort.cleared{--cb:var(--accent-hisui)}
+.clear-blade{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--accent-hisui);transform-origin:left;transform:scaleX(0);pointer-events:none;z-index:var(--z-overlay)}
+.clear-blade[hidden]{display:none}
+.clear-blade.cut{animation:spBlade var(--dur-epic) linear both}
+/* clear mark (§4.7): calm and level where the hanko is crooked */
+.clearmark{position:relative;width:96px;height:96px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-1);
+  --cut:var(--cut-l);--cb:var(--accent-hisui);--cf:var(--bg-1);--ct:var(--accent-hisui-t10);color:var(--accent-hisui)}
+.clearmark::after{inset:2px}
+.clearmark .k{font-family:var(--font-jp);font-weight:700;font-size:var(--fs-jp-seal);line-height:1;color:var(--accent-hisui)}
+.clearmark svg.i{width:20px;height:20px}
+.hanko-layer .clearmark{width:144px;height:144px}
+.hanko-layer .clearmark .k{font-size:48px}
+.clearmark.settle{animation:settle var(--dur-epic) var(--ease-jhk) both}
+@keyframes settle{0%{opacity:0;transform:scale(1.15)}60%{opacity:.1;transform:scale(1.15)}90%{opacity:1;transform:scale(1)}100%{opacity:1;transform:scale(1)}}
+@media (max-width:767px){.go-hero .clearmark{width:72px;height:72px}.go-hero .clearmark .k{font-size:24px}.go-hero .clearmark svg.i{width:16px;height:16px}}
+/* game over: unlock notice and branch results */
+.unlock-note{display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3);color:var(--accent-hisui)}
+.br-res{display:inline-flex;align-items:center;gap:var(--space-2)}
+.br-list{display:none}
+@media (max-width:767px){ .br-table{display:none} .br-list{display:block} }
+
+/* ============================================================
+   WORKFLOW LIBRARY — tags, message flow, library panel (design-standard §4.7 v2.2)
+   ============================================================ */
+.cards.ladder{grid-template-columns:repeat(5,minmax(0,1fr))}
+.wf-tags{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.wftag{display:inline-flex;align-items:center;height:22px;padding:0 var(--space-2);border:1px solid var(--line-2);border-radius:var(--radius-1);font-family:var(--font-mono);font-size:var(--fs-caption);line-height:var(--lh-caption);color:var(--text-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.wftag.none{border-style:dashed}
+.wf-error{display:flex;align-items:flex-start;gap:var(--space-2);color:var(--accent-warn)}
+.wf-error .t-data{color:var(--text-1)}
+.flow-panel.xfade{animation:fadeIn var(--dur-fast) var(--ease-out) both}
+.mf-branch{margin-bottom:var(--space-3);color:var(--text-2)}
+.tbl.flow{background:var(--bg-2)}
+.tbl.flow th{height:32px}
+.tbl.flow td{height:32px;padding:var(--space-1) var(--space-3);border-bottom:1px solid var(--line-hair);vertical-align:top}
+.tbl.flow td.num{width:32px;color:var(--text-2)}
+.tbl.flow td.dir{width:72px;white-space:nowrap}
+.tbl.flow td.tm{text-align:right;color:var(--text-2);white-space:nowrap}
+.tbl.flow td.msg{word-break:break-word}
+.tbl.flow tr.grp td{height:24px;padding-top:var(--space-2);font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-2);border-bottom:1px solid var(--line-1)}
+.tbl.flow tr.inj td:first-child{box-shadow:inset 2px 0 0 var(--accent-warn)}
+.tbl.flow tr.opt td{color:var(--text-2)}
+.ltag{display:inline-block;padding:0 var(--space-1);border:1px solid var(--line-1);border-radius:var(--radius-1);font-size:var(--fs-label);line-height:var(--lh-label);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2)}
+.cont{display:block}
+.tag.inj-tag{color:var(--accent-warn);border-color:var(--accent-warn);margin-left:var(--space-2)}
+.flow-list{display:none}
+.flow-list li{padding:var(--space-2) 0;border-top:1px solid var(--line-hair)}
+.flow-list li.inj{box-shadow:inset 2px 0 0 var(--accent-warn);padding-left:var(--space-2)}
+.flow-exp{display:flex;flex-direction:column;gap:var(--space-1);margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--line-1)}
+.ah-step{display:flex;flex-direction:column}
+.ah-step .t-data{color:var(--text-2)}
+.move-now #a-move-wf{font-size:var(--fs-caption)}
+.fail-detail{display:block;flex-basis:100%;min-width:0;margin-top:var(--space-1);color:var(--text-2);white-space:normal;overflow-wrap:anywhere}
+.br-list li{flex-wrap:wrap}
+.br-list li > span{min-width:0;overflow-wrap:anywhere}
+.br-table td{vertical-align:top;padding-top:var(--space-3);padding-bottom:var(--space-3);height:auto}
+.wl-list li{display:grid;grid-template-columns:auto 1fr auto;gap:var(--space-3);align-items:center;padding:var(--space-2) 0;border-top:1px solid var(--line-hair)}
+@media (max-width:1279px){
+  .cards.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cards.ladder .card:nth-child(5){grid-column:1;grid-row:3}
+  .cards.ladder .card:nth-child(4) .conn{left:calc(var(--space-4) + 16px);right:auto;top:100%;width:1px;height:var(--space-5);transform-origin:top}
+  .cards.ladder .card:nth-child(4) .conn.dashed{background:repeating-linear-gradient(180deg,var(--line-2) 0 4px,transparent 4px 8px)}
+  .cards.ladder .card:nth-child(4) .conn.draw{animation-name:connY}
+}
+@media (max-width:767px){
+  .cards.ladder{grid-template-columns:1fr}
+  .cards.ladder .card:nth-child(n){grid-column:auto;grid-row:auto}
+  .tbl.flow{display:none}
+  .flow-list{display:block}
+  .flow-list:not(.expanded) li:nth-child(n+9){display:none}
+  .ah-step{display:none}
+  .wl-list li{grid-template-columns:auto 1fr}
+  .wl-list li .t-caption{grid-column:2}
+}
+
+/* ============================================================
    REDUCED MOTION (§5.6)
    ============================================================ */
 @media (prefers-reduced-motion:reduce){
@@ -626,7 +763,9 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:var(--space-6
   #main.entering > .screen,.stagger > *,.tooltip.show,.dialog,.scrim.closing .dialog,.log li.new{animation:fadeIn var(--dur-fast) linear both!important;animation-duration:var(--dur-fast)!important}
   .kpi.shake,.escalate .brackets span,.escalate .scan i{animation:none!important}
   .blade{animation:none}
-  .hanko.stamp{animation:fadeIn var(--dur-fast) linear both!important;animation-duration:var(--dur-fast)!important}
+  .hanko.stamp,.clearmark.settle{animation:fadeIn var(--dur-fast) linear both!important;animation-duration:var(--dur-fast)!important}
+  .conn.draw,.card.level.unlocking,.ah-cov.flash .cov-bar,.clear-blade.cut{animation:none!important}
+  .cov-fill{transition:none}
   #main.impact{transform:none}
 }
 </style>
@@ -662,22 +801,45 @@ select.input{appearance:none;-webkit-appearance:none;padding-right:var(--space-6
 <script>
 'use strict';
 /* ==================================================================
-   CONFIG — every undefined product value (gaps G1–G4) lives here.
+   CONFIG — every undefined product value (gaps G1–G4, G13) lives here.
    Replacing them needs no code changes outside this object.
    ================================================================== */
 const CONFIG = {
   tickMs: 100,                 // simulation tick (10 Hz)
   decisionTicks: 20,           // agent chooses a move every 2 s
   rewardTicks: 10,             // reward and score computed every 1 s
-  agentVersion: 'DQN v0.3 · Stackelberg',
+  agentName: 'DQN v0.3',       // shown as "DQN v0.3 · <game model>"
 
-  // PLACEHOLDER (G1): failure thresholds per KPI.
+  // PLACEHOLDER (G1): failure thresholds per KPI (stress games and ladder levels).
   thresholds: {
-    rach:    { limit: 72,  dir: 'below' }, // % RACH success
-    prb:     { limit: 97,  dir: 'above' }, // % PRB utilisation
-    rejects: { limit: 200, dir: 'above' }, // rejects /s
-    latency: { limit: 25,  dir: 'above' }, // ms p95
-    drops:   { limit: 35,  dir: 'above' }, // drops /s
+    rach:      { limit: 72,  dir: 'below' }, // % RACH success
+    prb:       { limit: 97,  dir: 'above' }, // % PRB utilisation
+    rejects:   { limit: 200, dir: 'above' }, // rejects /s
+    latency:   { limit: 25,  dir: 'above' }, // ms p95
+    drops:     { limit: 35,  dir: 'above' }, // drops /s
+    regSucc:   { limit: 72,  dir: 'below' }, // % registration success (L1)
+    regLat:    { limit: 260, dir: 'above' }, // ms registration latency (L1)
+    retries:   { limit: 180, dir: 'above' }, // retries /s (L1)
+    regRej:    { limit: 200, dir: 'above' }, // registration rejects /s (L1)
+    timeouts:  { limit: 35,  dir: 'above' }, // procedure timeouts /s (L1)
+    sessSucc:  { limit: 72,  dir: 'below' }, // % session setup success (L2)
+    setupLat:  { limit: 115, dir: 'above' }, // ms setup latency (L2)
+    fallbacks: { limit: 140, dir: 'above' }, // fallbacks /s (L2)
+    sessRej:   { limit: 200, dir: 'above' }, // session rejects /s (L2)
+    sessDrops: { limit: 35,  dir: 'above' }, // session drops /s (L2, L3)
+    hoSucc:    { limit: 72,  dir: 'below' }, // % handover success (L3)
+    interrupt: { limit: 85,  dir: 'above' }, // ms interruption (L3)
+    pingpong:  { limit: 28,  dir: 'above' }, // % ping-pong rate (L3)
+    rlf:       { limit: 35,  dir: 'above' }, // RLF /min (L3)
+    cellTput:  { limit: 450, dir: 'below' }, // Mbps cell throughput (L4)
+    ueP5:      { limit: 10,  dir: 'below' }, // Mbps per-UE p5 (L4)
+    fairness:  { limit: 0.58, dir: 'below' }, // Jain's index (L4)
+    bler:      { limit: 25,  dir: 'above' }, // % BLER (L4)
+    callSucc:  { limit: 72,  dir: 'below' }, // % call setup success (L5)
+    callSetup: { limit: 2500, dir: 'above' }, // ms INVITE → 200 OK (L5)
+    qosFail:   { limit: 35,  dir: 'above' }, // dedicated QoS flow failures /min (L5)
+    sipErr:    { limit: 200, dir: 'above' }, // SIP error responses /s (L5)
+    callDrops: { limit: 35,  dir: 'above' }, // call drops /min (L5)
   },
   // PLACEHOLDER (G1): which KPIs can end each game, and how long a breach must hold.
   failureKpis: {
@@ -685,12 +847,20 @@ const CONFIG = {
     retry:       ['rach', 'rejects'],
     smallpacket: ['prb', 'latency', 'drops'],
     gbr:         ['prb', 'drops', 'rejects'],
+    l1:          ['regSucc', 'regRej', 'timeouts'],
+    l2:          ['sessSucc', 'sessRej', 'sessDrops'],
+    l3:          ['hoSucc', 'rlf', 'sessDrops'],
+    l4:          ['cellTput', 'fairness', 'bler'],
+    l5:          ['callSucc', 'sipErr', 'callDrops'],
   },
   failHoldTicks: 30,           // PLACEHOLDER (G1): breach must persist 3 s
 
-  // PLACEHOLDER (G2): reward weights and score scale.
+  // PLACEHOLDER (G2): reward weights (one per reward component, in DATA order) and score scale.
   reward: {
-    weights: { reject: 0.40, latency: 0.35, drop: 0.25 },
+    weights: {
+      signalling: [0.40, 0.35, 0.25], retry: [0.40, 0.35, 0.25], smallpacket: [0.40, 0.35, 0.25], gbr: [0.40, 0.35, 0.25],
+      l1: [0.45, 0.25, 0.30], l2: [0.45, 0.25, 0.30], l3: [0.40, 0.30, 0.30], l4: [0.40, 0.35, 0.25], l5: [0.45, 0.25, 0.30],
+    },
     baseline: 0.5,             // ratio-to-threshold that scores zero reward
     gain: 10,                  // reward = Σ weight × (ratio − baseline) × gain
     scoreScale: 20,            // score += round(scoreScale × Σ weight × ratio) each second
@@ -704,6 +874,16 @@ const CONFIG = {
     brutal: { label: 'Brutal', ues: 60000, burst: 4, base: 0.60, step: 0.08, everySec: 30, max: 1.30 },
   },
 
+  ladder: {
+    // PLACEHOLDER (G3): share of a level's branch set played per difficulty (never fewer than minBranches).
+    branchFrac: { easy: 0, normal: 0.6, hard: 0.8, brutal: 1 },
+    minBranches: 4,
+    // PLACEHOLDER (G13): minimum run time before a level can clear, in seconds.
+    minClearSec: { easy: 60, normal: 90, hard: 120, brutal: 150 },
+    passTicks: 40,             // a branch passes after 4 s of play with no DUT failure
+    hoEveryTicks: 60,          // L3: handover cadence between Cell A and Cell B
+  },
+
   // PLACEHOLDER (G4): assumed field-capture schema.
   captureSchema: ['id', 'location', 'date', 'feature', 'profile'],
 
@@ -715,9 +895,86 @@ const CONFIG = {
 };
 
 /* ==================================================================
+   WORKFLOW LIBRARY — embedded copy of 5g_signalling_workflows.json
+   (unchanged apart from whitespace). Source of truth for every ladder
+   branch's message flow, timers and expected behaviour (PRD M11).
+   ================================================================== */
+const WORKFLOW_LIBRARY = {"schema":"test-arena.signalling-workflows","schemaVersion":"1.0.0","technology":"5G NR SA (5GS)","generated":"2026-11-02","specBaseline":{"defaultMessageContents":"3GPP TS 38.508-1 (clause 4.6 RRC defaults, clause 4.7 NAS defaults, clause 4.5 generic procedures, clause 6 cell/test environment)","rrc":"3GPP TS 38.331","nas5gs":"3GPP TS 24.501","ims":"3GPP TS 24.229, conformance defaults TS 34.229-1 / 34.229-5","conformanceProcedures":"3GPP TS 38.523-1","ueTestMode":"3GPP TS 38.509","note":"Fields with \"verify\": true are typical 38.508-1 defaults that change between releases or are PIXIT/ICS-dependent. Check them against the 38.508-1 version the test suite is baselined on."},"conventions":{"direction":{"UL":"UE -> network","DL":"network -> UE","UE":"UE-internal event","SS":"System Simulator action (cell power, timers, injected failure)"},"channels":["SRB0/CCCH","SRB1/DCCH","SRB2/DCCH","PCCH","BCCH","DRB","PHY/MAC"],"layers":["RRC","5GMM","5GSM","SIP","SDP","RTP","UP","PHY","MAC"],"stepFields":"seq, dir, layer, channel, message, container (outer message carrying NAS/SIP), ies, ref (pointer into defaults), expect (pass criteria), optional (bool), timers (started/stopped)"},"defaults":{"testEnvironment":{"plmn1":{"mcc":"001","mnc":"01"},"nrCell1":{"tac":"000001","role":"serving","verify":true},"nrCell2":{"tac":"000001","role":"intra-frequency neighbour","verify":true},"nrCell3":{"tac":"000002","role":"neighbour in different TA (for mobility registration)","verify":true},"cellPowerLevels_dBm_per_SCS":{"serving":-88,"suitableNeighbour":-82,"nonSuitableOff":-145,"verify":true},"sNSSAI":{"sst":1,"sd":null},"ueTimersAndConstants_SIB1":{"t300":"ms1000","t301":"ms1000","t310":"ms1000","n310":"n1","t311":"ms30000","n311":"n1","t319":"ms1000","verify":true}},"rrc":{"RRCSetup":{"radioBearerConfig.srb-ToAddModList":[{"srb-Identity":1}],"masterCellGroup.cellGroupId":0,"masterCellGroup.rlc-BearerToAddModList":[{"logicalChannelIdentity":1,"servedRadioBearer":"srb-Identity 1","rlc-Config":"am"}],"masterCellGroup.mac-CellGroupConfig":"38.508-1 default","masterCellGroup.physicalCellGroupConfig":"38.508-1 default","masterCellGroup.spCellConfig":"38.508-1 default"},"RRCSetupComplete":{"selectedPLMN-Identity":1,"registeredAMF":"not present","ng-5G-S-TMSI-Value":"ng-5G-S-TMSI-Part2 (when 5G-S-TMSI available)"},"SecurityModeCommand":{"securityAlgorithmConfig.cipheringAlgorithm":{"value":"nea2","source":"PIXIT/ICS","verify":true},"securityAlgorithmConfig.integrityProtAlgorithm":{"value":"nia2","source":"PIXIT/ICS","verify":true}},"UECapabilityEnquiry":{"ue-CapabilityRAT-RequestList":[{"rat-Type":"nr"}]},"RRCReconfiguration_SRB2_DRB1":{"radioBearerConfig.srb-ToAddModList":[{"srb-Identity":2}],"radioBearerConfig.drb-ToAddModList":[{"drb-Identity":1,"cnAssociation.sdap-Config":{"pdu-Session":1,"sdap-HeaderDL":"absent","sdap-HeaderUL":"absent","defaultDRB":true,"mappedQoS-FlowsToAdd":[1]},"pdcp-Config":{"pdcp-SN-SizeUL":"len18bits","pdcp-SN-SizeDL":"len18bits","headerCompression":"notUsed","discardTimer":{"value":"infinity","verify":true},"t-Reordering":{"value":"38.508-1 default","verify":true}}}],"radioBearerConfig.securityConfig.keyToUse":"master","masterCellGroup.rlc-BearerToAddModList":[{"logicalChannelIdentity":2,"servedRadioBearer":"srb-Identity 2","rlc-Config":"am"},{"logicalChannelIdentity":4,"servedRadioBearer":"drb-Identity 1","rlc-Config":{"mode":"am","sn-FieldLength":"size18","verify":true},"mac-LogicalChannelConfig":{"prioritisedBitRate":"infinity","priority":{"value":"38.508-1 default","verify":true},"logicalChannelGroup":{"value":"38.508-1 default","verify":true}}}],"measConfig":"not present"},"DRB_Voice_UM":{"drb-Identity":2,"cnAssociation.sdap-Config":{"pdu-Session":2,"defaultDRB":false,"mappedQoS-FlowsToAdd":[2]},"pdcp-Config":{"pdcp-SN-SizeUL":"len12bits","pdcp-SN-SizeDL":"len12bits","headerCompression":"rohc (profile0x0001/0x0002) if supported","verify":true},"rlc-Config":{"mode":"um-Bi-Directional","sn-FieldLength":"size12","verify":true},"logicalChannelIdentity":5},"DRB_Video_AM":{"drb-Identity":3,"cnAssociation.sdap-Config":{"pdu-Session":2,"defaultDRB":false,"mappedQoS-FlowsToAdd":[3]},"pdcp-Config":{"pdcp-SN-SizeUL":"len18bits","pdcp-SN-SizeDL":"len18bits","verify":true},"rlc-Config":{"mode":"am","sn-FieldLength":"size18","verify":true},"logicalChannelIdentity":6},"RRCRelease_Idle":{"suspendConfig":"not present","redirectedCarrierInfo":"not present","cellReselectionPriorities":"not present"},"MeasConfig_A3":{"measObjectToAddModList":[{"measObjectId":1,"ssbFrequency":"serving NR-ARFCN (SSB)","subcarrierSpacing":"per band default"}],"reportConfigToAddModList":[{"reportConfigId":1,"eventTriggered":{"eventId":"eventA3","a3-Offset":{"rsrp":6,"unit":"0.5 dB steps (=3 dB)","verify":true},"reportOnLeave":false,"hysteresis":{"value":0,"verify":true},"timeToTrigger":{"value":"ms0","verify":true},"rsType":"ssb","reportInterval":"ms1024","reportAmount":"r1","reportQuantityCell":{"rsrp":true,"rsrq":false,"sinr":false},"maxReportCells":1}}],"measIdToAddModList":[{"measId":1,"measObjectId":1,"reportConfigId":1}],"s-MeasureConfig":"not present"}},"nas":{"pduSession_Internet":{"pduSessionId":1,"pti":1,"pduSessionType":"IPv4v6 per UE capability (PIXIT)","sscMode":1,"dnn":{"value":"internet","source":"PIXIT","verify":true},"sNSSAI":"sst 1","qosRule":"default, QFI 1, match-all","5qi":9,"sessionAMBR":{"value":"38.508-1 default","verify":true}},"pduSession_IMS":{"pduSessionId":2,"pti":2,"pduSessionType":"IPv4v6 per UE capability (PIXIT)","sscMode":1,"dnn":"ims","sNSSAI":"sst 1","qosRule":"default, QFI 1 (IMS signalling)","5qi":5,"pCscfAddress":"in ePCO / extended protocol configuration options"},"qosFlow_Voice":{"qfi":2,"5qi":1,"gfbr":"per codec, e.g. AMR-WB/EVS","mfbr":"per codec","packetFilters":"derived from SDP (RTP/RTCP ports)"},"qosFlow_Video":{"qfi":3,"5qi":2,"gfbr":"per video codec bitrate","mfbr":"per video codec bitrate","packetFilters":"derived from SDP (video RTP/RTCP ports)"},"ServiceRequest":{"ngKSI":"value from registration (e.g. 0)","5G-S-TMSI":"from REGISTRATION ACCEPT","securityHeader":"integrity protected"},"ServiceAccept":{"pduSessionStatus":"PSI(1)=1","pduSessionReactivationResult":"PSI(1)=0 (success)","eapMessage":"not present","t3448":"not present"}},"ims":{"codecs":{"voice":["EVS","AMR-WB","AMR"],"video":["H.264 (Constrained Baseline/High)","H.265"]},"sip":{"transport":"UDP/TCP per message size (TS 24.229)","preconditions":"qos (Supported: precondition)","100rel":true,"featureTags":{"voice":"+g.3gpp.icsi-ref=\"urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel\"","video":"+g.3gpp.icsi-ref mmtel; video"}},"users":{"ue":"IMPU from ISIM / PIXIT","remote":"SS-simulated remote UE (tel or sip URI per 34.229-1)"},"verify":true}},"workflows":[{"id":"WF-01","name":"MO Data Call","category":"data","result":"success","references":["TS 38.508-1 4.5 generic procedures","TS 24.501 5.6.1 Service request","TS 38.331 5.3.3 RRC connection establishment"],"preconditions":["UE in RRC_IDLE, 5GMM-REGISTERED","PDU session 1 (internet) established, user plane inactive","NR Cell 1 serving"],"steps":[{"seq":1,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetupRequest","ies":{"ue-Identity":"ng-5G-S-TMSI-Part1","establishmentCause":"mo-Data"},"timers":{"start":["T300"]}},{"seq":2,"dir":"DL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetup","ref":"defaults.rrc.RRCSetup","timers":{"stop":["T300"]}},{"seq":3,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCSetupComplete","ref":"defaults.rrc.RRCSetupComplete"},{"seq":4,"dir":"UL","layer":"5GMM","container":"RRCSetupComplete.dedicatedNAS-Message","message":"SERVICE REQUEST","ref":"defaults.nas.ServiceRequest","ies":{"serviceType":"data","uplinkDataStatus":"PSI(1)=1","pduSessionStatus":"PSI(1)=1"},"timers":{"start":["T3517"]}},{"seq":5,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"SecurityModeCommand","ref":"defaults.rrc.SecurityModeCommand"},{"seq":6,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"SecurityModeComplete"},{"seq":7,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"UECapabilityEnquiry","ref":"defaults.rrc.UECapabilityEnquiry","optional":true},{"seq":8,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"UECapabilityInformation","optional":true},{"seq":9,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ref":"defaults.rrc.RRCReconfiguration_SRB2_DRB1"},{"seq":10,"dir":"DL","layer":"5GMM","container":"RRCReconfiguration.dedicatedNAS-MessageList (or DLInformationTransfer)","message":"SERVICE ACCEPT","ref":"defaults.nas.ServiceAccept","timers":{"stop":["T3517"]}},{"seq":11,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":12,"dir":"UL","layer":"UP","channel":"DRB","message":"UL user data (QFI 1)","ref":"defaults.nas.pduSession_Internet","expect":"UL IP packets received on DRB1/QFI 1; DL data echoed (UE test mode loopback per 38.509 or application)"},{"seq":13,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCRelease","ref":"defaults.rrc.RRCRelease_Idle"}],"postconditions":["UE in RRC_IDLE, 5GMM-REGISTERED, PDU session 1 retained"],"passCriteria":["RRC connection established with cause mo-Data","Service request accepted, T3517 stopped","DRB1 carries UL/DL data on QFI 1"]},{"id":"WF-02","name":"MT Data Call","category":"data","result":"success","references":["TS 38.331 5.3.2 Paging","TS 24.501 5.6.2 Paging procedure, 5.6.1 Service request"],"preconditions":["UE in RRC_IDLE, 5GMM-REGISTERED","PDU session 1 established, user plane inactive","SS has pending DL data for PDU session 1"],"steps":[{"seq":1,"dir":"DL","layer":"RRC","channel":"PCCH","message":"Paging","ies":{"pagingRecordList[0].ue-Identity":"ng-5G-S-TMSI (48 bits)","pagingRecordList[0].accessType":"not present (3GPP access)"},"expect":"UE monitors paging occasion per DRX (defaultPagingCycle per SIB1, 38.508-1 default)"},{"seq":2,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetupRequest","ies":{"ue-Identity":"ng-5G-S-TMSI-Part1","establishmentCause":"mt-Access"},"timers":{"start":["T300"]}},{"seq":3,"dir":"DL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetup","ref":"defaults.rrc.RRCSetup"},{"seq":4,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCSetupComplete","ref":"defaults.rrc.RRCSetupComplete"},{"seq":5,"dir":"UL","layer":"5GMM","container":"RRCSetupComplete.dedicatedNAS-Message","message":"SERVICE REQUEST","ref":"defaults.nas.ServiceRequest","ies":{"serviceType":"mobile terminated services","pduSessionStatus":"PSI(1)=1","uplinkDataStatus":"not present"},"timers":{"start":["T3517"]}},{"seq":6,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"SecurityModeCommand","ref":"defaults.rrc.SecurityModeCommand"},{"seq":7,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"SecurityModeComplete"},{"seq":8,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ref":"defaults.rrc.RRCReconfiguration_SRB2_DRB1"},{"seq":9,"dir":"DL","layer":"5GMM","container":"RRCReconfiguration.dedicatedNAS-MessageList","message":"SERVICE ACCEPT","ref":"defaults.nas.ServiceAccept","timers":{"stop":["T3517"]}},{"seq":10,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":11,"dir":"DL","layer":"UP","channel":"DRB","message":"DL user data (QFI 1)","expect":"DL packets delivered on DRB1"},{"seq":12,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCRelease","ref":"defaults.rrc.RRCRelease_Idle"}],"postconditions":["UE in RRC_IDLE, 5GMM-REGISTERED"],"passCriteria":["UE responds to paging with cause mt-Access","SERVICE REQUEST service type = mobile terminated services","DL data received"]},{"id":"WF-03","name":"IMS Voice Call (VoNR, MO)","category":"ims-voice","result":"success","references":["TS 24.229 (SIP)","TS 34.229-1 / 34.229-5 (IMS conformance defaults)","TS 24.501 6.3.2 Network-requested PDU session modification","TS 38.331"],"preconditions":["UE 5GMM-REGISTERED with IMS voice over PS supported indicated in REGISTRATION ACCEPT (5GS network feature support: IMS VoPS = 1)","IMS PDU session 2 (DNN ims, 5QI 5) established","UE IMS-registered (SIP REGISTER/200 OK complete)","UE in RRC_IDLE"],"steps":[{"seq":1,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetupRequest","ies":{"ue-Identity":"ng-5G-S-TMSI-Part1","establishmentCause":"mo-VoiceCall"}},{"seq":2,"dir":"DL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetup","ref":"defaults.rrc.RRCSetup"},{"seq":3,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCSetupComplete","ref":"defaults.rrc.RRCSetupComplete"},{"seq":4,"dir":"UL","layer":"5GMM","container":"RRCSetupComplete.dedicatedNAS-Message","message":"SERVICE REQUEST","ref":"defaults.nas.ServiceRequest","ies":{"serviceType":"data","uplinkDataStatus":"PSI(2)=1","pduSessionStatus":"PSI(1)=1, PSI(2)=1"}},{"seq":5,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"SecurityModeCommand","ref":"defaults.rrc.SecurityModeCommand"},{"seq":6,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"SecurityModeComplete"},{"seq":7,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ies":{"note":"SRB2 + DRB for IMS signalling (PDU session 2, QFI 1, 5QI 5) + DRB1 for internet if reactivated"},"ref":"defaults.rrc.RRCReconfiguration_SRB2_DRB1"},{"seq":8,"dir":"DL","layer":"5GMM","container":"RRCReconfiguration.dedicatedNAS-MessageList","message":"SERVICE ACCEPT","ies":{"pduSessionReactivationResult":"PSI(2)=0"}},{"seq":9,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":10,"dir":"UL","layer":"SIP","channel":"DRB","message":"INVITE","ref":"defaults.ims","ies":{"Request-URI":"remote UE URI","Supported":"100rel, precondition","Accept-Contact / P-Preferred-Service":"mmtel ICSI","SDP":"m=audio, EVS/AMR-WB/AMR payloads, a=curr:qos local none, a=des:qos mandatory local sendrecv"}},{"seq":11,"dir":"DL","layer":"SIP","channel":"DRB","message":"100 Trying"},{"seq":12,"dir":"DL","layer":"5GSM","container":"DLInformationTransfer > DL NAS TRANSPORT","message":"PDU SESSION MODIFICATION COMMAND","ref":"defaults.nas.qosFlow_Voice","ies":{"pduSessionId":2,"pti":0,"authorizedQoSRules":"create new QoS rule, QFI 2, packet filters from SDP","authorizedQoSFlowDescriptions":"QFI 2, 5QI 1, GFBR/MFBR"}},{"seq":13,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ref":"defaults.rrc.DRB_Voice_UM","ies":{"note":"may be the same RRCReconfiguration carrying the NAS PDU in dedicatedNAS-MessageList"}},{"seq":14,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":15,"dir":"UL","layer":"5GSM","container":"ULInformationTransfer > UL NAS TRANSPORT","message":"PDU SESSION MODIFICATION COMPLETE","ies":{"pduSessionId":2}},{"seq":16,"dir":"DL","layer":"SIP","channel":"DRB","message":"183 Session Progress","ies":{"Require":"100rel","SDP":"selected codec, a=curr:qos remote sendrecv"}},{"seq":17,"dir":"UL","layer":"SIP","channel":"DRB","message":"PRACK"},{"seq":18,"dir":"DL","layer":"SIP","channel":"DRB","message":"200 OK (PRACK)"},{"seq":19,"dir":"UL","layer":"SIP","channel":"DRB","message":"UPDATE","ies":{"SDP":"a=curr:qos local sendrecv (preconditions met)"}},{"seq":20,"dir":"DL","layer":"SIP","channel":"DRB","message":"200 OK (UPDATE)"},{"seq":21,"dir":"DL","layer":"SIP","channel":"DRB","message":"180 Ringing"},{"seq":22,"dir":"DL","layer":"SIP","channel":"DRB","message":"200 OK (INVITE)"},{"seq":23,"dir":"UL","layer":"SIP","channel":"DRB","message":"ACK"},{"seq":24,"dir":"UL","layer":"RTP","channel":"DRB","message":"Voice media (RTP/RTCP) on QFI 2","expect":"Bidirectional RTP on DRB2 (RLC UM), codec as negotiated"},{"seq":25,"dir":"UL","layer":"SIP","channel":"DRB","message":"BYE"},{"seq":26,"dir":"DL","layer":"SIP","channel":"DRB","message":"200 OK (BYE)"},{"seq":27,"dir":"DL","layer":"5GSM","container":"DL NAS TRANSPORT","message":"PDU SESSION MODIFICATION COMMAND","ies":{"authorizedQoSRules":"delete QoS rule for QFI 2","authorizedQoSFlowDescriptions":"delete QFI 2"}},{"seq":28,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ies":{"radioBearerConfig.drb-ToReleaseList":[2]}},{"seq":29,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":30,"dir":"UL","layer":"5GSM","container":"UL NAS TRANSPORT","message":"PDU SESSION MODIFICATION COMPLETE"}],"postconditions":["Call released, QFI 2 / DRB2 removed","IMS PDU session 2 retained, UE IMS-registered"],"passCriteria":["RRC cause mo-VoiceCall","Dedicated QoS flow 5QI 1 established before 180/200","SIP dialog established and released cleanly"]},{"id":"WF-04","name":"IMS Video Call (ViNR, MO)","category":"ims-video","result":"success","references":["TS 24.229","TS 34.229-1 / 34.229-5","TS 26.114 (MTSI codecs)","TS 24.501 6.3.2"],"preconditions":["As WF-03 preconditions","UE supports video (ICS)"],"extends":"WF-03","stepOverrides":[{"seq":1,"ies":{"establishmentCause":"mo-VideoCall"}},{"seq":10,"ies":{"SDP":"m=audio (EVS/AMR-WB) + m=video (H.264/H.265), preconditions per media line","Accept-Contact":"mmtel ICSI; video"}},{"seq":12,"ies":{"authorizedQoSRules":"create QoS rules QFI 2 (voice, 5QI 1) and QFI 3 (video, 5QI 2)","authorizedQoSFlowDescriptions":"QFI 2 5QI 1; QFI 3 5QI 2"},"ref":["defaults.nas.qosFlow_Voice","defaults.nas.qosFlow_Video"]},{"seq":13,"ref":["defaults.rrc.DRB_Voice_UM","defaults.rrc.DRB_Video_AM"],"ies":{"radioBearerConfig.drb-ToAddModList":["drb-Identity 2 (voice)","drb-Identity 3 (video)"]}},{"seq":24,"message":"Voice RTP on QFI 2 + Video RTP on QFI 3","expect":"Audio on DRB2, video on DRB3"},{"seq":27,"ies":{"authorizedQoSRules":"delete QFI 2 and QFI 3"}},{"seq":28,"ies":{"radioBearerConfig.drb-ToReleaseList":[2,3]}}],"postconditions":["Call released, QFI 2/3 and DRB2/3 removed"],"passCriteria":["RRC cause mo-VideoCall","Both 5QI 1 and 5QI 2 flows established","Audio and video media flow on separate DRBs"]},{"id":"WF-05","name":"Intra-frequency Handover (NR to NR, Xn/N2 transparent to UE)","category":"mobility-connected","result":"success","references":["TS 38.331 5.3.5.5 Reconfiguration with sync","TS 38.331 5.5 Measurements","TS 38.508-1 measurement defaults"],"preconditions":["UE in RRC_CONNECTED on NR Cell 1 with DRB1 active (WF-01 steps 1-11)","NR Cell 2 configured, same TA"],"steps":[{"seq":1,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ies":{"measConfig":"see ref"},"ref":"defaults.rrc.MeasConfig_A3"},{"seq":2,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":3,"dir":"SS","layer":"PHY","message":"Change cell power: Cell 1 -> -94 dBm, Cell 2 -> -82 dBm","ies":{"verify":true},"expect":"A3 entering condition met"},{"seq":4,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"MeasurementReport","ies":{"measId":1,"measResultServingMOList":"Cell 1 RSRP","measResultNeighCells.measResultListNR":"Cell 2 PCI, RSRP"}},{"seq":5,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ies":{"masterCellGroup.spCellConfig.reconfigurationWithSync.spCellConfigCommon":"Cell 2 common config","masterCellGroup.spCellConfig.reconfigurationWithSync.newUE-Identity":"new C-RNTI (SS-assigned)","masterCellGroup.spCellConfig.reconfigurationWithSync.t304":{"value":"ms1000","verify":true},"masterCellGroup.spCellConfig.reconfigurationWithSync.rach-ConfigDedicated":"CFRA preamble (SS choice)","radioBearerConfig.securityConfig.keyToUse":"master","masterKeyUpdate":"keySetChangeIndicator false, nextHopChainingCount per SS"},"timers":{"start":["T304"]}},{"seq":6,"dir":"UL","layer":"MAC","channel":"PHY/MAC","message":"Random Access (dedicated preamble) on Cell 2","expect":"RAR received"},{"seq":7,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete (on Cell 2)","timers":{"stop":["T304"]}},{"seq":8,"dir":"UL","layer":"UP","channel":"DRB","message":"User data continues on Cell 2","expect":"PDCP continuity, no data loss on RLC AM bearer"}],"variants":[{"id":"WF-05b","name":"Inter-frequency handover","changes":"measObject on target SSB ARFCN, measGapConfig if UE requires gaps"},{"id":"WF-05c","name":"Handover to cell in new TA","changes":"Target = Cell 3 (TAC 000002); after HO UE performs REGISTRATION REQUEST type mobility registration updating"}],"postconditions":["UE RRC_CONNECTED on Cell 2"],"passCriteria":["MeasurementReport sent on A3","RA on target and RRCReconfigurationComplete before T304 expiry"]},{"id":"WF-06","name":"Cell Reselection (RRC_IDLE)","category":"mobility-idle","result":"success","references":["TS 38.304 5.2.4 Cell reselection","TS 38.331 SIB1/SIB2/SIB3","TS 38.508-1 SIB defaults"],"preconditions":["UE in RRC_IDLE camped on NR Cell 1","SIB1 cellSelectionInfo: q-RxLevMin -70 (= -140 dBm)","SIB2: q-Hyst dB0 / per default; intraFreq reselection allowed","verify SIB values against 38.508-1"],"steps":[{"seq":1,"dir":"DL","layer":"RRC","channel":"BCCH","message":"MIB / SIB1 / SIB2 (Cell 1 and Cell 2)","ies":{"SIB1.cellSelectionInfo.q-RxLevMin":-70,"SIB2.cellReselectionInfoCommon.q-Hyst":{"value":"dB0","verify":true},"SIB2.intraFreqCellReselectionInfo.t-ReselectionNR":{"value":1,"verify":true}}},{"seq":2,"dir":"SS","layer":"PHY","message":"Cell 1 -> -94 dBm, Cell 2 -> -82 dBm (same TA)","expect":"Cell 2 ranked best for > Treselection"},{"seq":3,"dir":"UE","layer":"RRC","message":"UE reselects to Cell 2 (no signalling)","expect":"UE camps on Cell 2; verify by paging UE on Cell 2 and checking RRCSetupRequest on Cell 2"},{"seq":4,"dir":"DL","layer":"RRC","channel":"PCCH","message":"Paging (Cell 2)","ies":{"ue-Identity":"ng-5G-S-TMSI"}},{"seq":5,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetupRequest (Cell 2)","ies":{"establishmentCause":"mt-Access"},"expect":"Confirms camping"}],"variants":[{"id":"WF-06b","name":"Reselection to cell in new TA","changes":"Target Cell 3 (TAC 000002) -> RRCSetupRequest cause mo-Signalling, REGISTRATION REQUEST type 'mobility registration updating', REGISTRATION ACCEPT with new TAI list, REGISTRATION COMPLETE if new 5G-GUTI"},{"id":"WF-06c","name":"Inter-frequency priority-based reselection","changes":"SIB4 with cellReselectionPriority, threshX-High/Low"}],"postconditions":["UE camped on Cell 2 in RRC_IDLE"],"passCriteria":["UE answers paging on new cell"]},{"id":"WF-07","name":"Registration Failure (REGISTRATION REJECT)","category":"failure-registration","result":"failure","references":["TS 24.501 5.5.1.2.5 Initial registration not accepted by the network","TS 38.523-1 clause 9.1.5"],"preconditions":["UE switched on, USIM inserted, NR Cell 1 available"],"steps":[{"seq":1,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetupRequest","ies":{"ue-Identity":"randomValue (39-bit)","establishmentCause":"mo-Signalling"}},{"seq":2,"dir":"DL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetup","ref":"defaults.rrc.RRCSetup"},{"seq":3,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCSetupComplete","ies":{"selectedPLMN-Identity":1}},{"seq":4,"dir":"UL","layer":"5GMM","container":"RRCSetupComplete.dedicatedNAS-Message","message":"REGISTRATION REQUEST","ies":{"5GSRegistrationType":"initial registration, FOR=1","ngKSI":"no key available (7)","5GSMobileIdentity":"SUCI (null scheme per PIXIT)","ueSecurityCapability":"per UE","requestedNSSAI":"sst 1"},"timers":{"start":["T3510"]}},{"seq":5,"dir":"DL","layer":"5GMM","container":"DLInformationTransfer","message":"REGISTRATION REJECT","ies":{"5GMMCause":"<<parameter: see causeMatrix>>","t3346":"present only for cause #22","t3502":"optional"},"timers":{"stop":["T3510"]}},{"seq":6,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCRelease","ref":"defaults.rrc.RRCRelease_Idle"}],"causeMatrix":[{"cause":"#3 Illegal UE","expectedUE":"USIM invalid for 5GS, delete 5G-GUTI/TAI list/ngKSI, 5GMM-DEREGISTERED.NO-SUPI-like state; no further attempts until power cycle"},{"cause":"#7 5GS services not allowed","expectedUE":"USIM invalid for 5GS services, 5GMM-DEREGISTERED.NO-SUPI"},{"cause":"#11 PLMN not allowed","expectedUE":"Add PLMN to forbidden PLMN list, perform PLMN selection"},{"cause":"#12 Tracking area not allowed","expectedUE":"Add TAI to '5GS forbidden TAs for regional provision of service', LIMITED-SERVICE"},{"cause":"#13 Roaming not allowed in this TA","expectedUE":"Add TAI to '5GS forbidden TAs for roaming', PLMN selection"},{"cause":"#15 No suitable cells in TA","expectedUE":"Add TAI to forbidden roaming list, search other TA in same PLMN"},{"cause":"#22 Congestion (T3346 included)","expectedUE":"Start T3346, no new registration until expiry"},{"cause":"#27 N1 mode not allowed","expectedUE":"Disable N1 mode capability for 3GPP access"},{"cause":"#62 No network slices available","expectedUE":"Store rejected NSSAI, no retry with same NSSAI"},{"cause":"No response (SS ignores REGISTRATION REQUEST)","expectedUE":"T3510 expiry -> retry; after 5 attempts start T3502 (abnormal case)"}],"variants":[{"id":"WF-07b","name":"Authentication failure","changes":"SS sends AUTHENTICATION REQUEST with wrong MAC -> UE sends AUTHENTICATION FAILURE cause #20 MAC failure; with SQN out of range -> cause #21 synch failure + AUTS"},{"id":"WF-07c","name":"NAS security mode reject","changes":"SS sends SECURITY MODE COMMAND with mismatched replayed UE security capabilities -> SECURITY MODE REJECT cause #23"}],"postconditions":["UE in 5GMM-DEREGISTERED substate per cause"],"passCriteria":["UE behaviour matches causeMatrix (no unexpected retries, correct timer handling, correct list storage)"]},{"id":"WF-08","name":"MO Data Call Failure","category":"failure-data","result":"failure","references":["TS 38.331 5.3.3.5 / 5.3.15 RRCReject","TS 24.501 5.6.1.5 Service request not accepted, 5.6.1.7 abnormal cases"],"preconditions":["As WF-01 preconditions"],"failureCases":[{"caseId":"WF-08a","name":"RRC connection rejected","steps":[{"seq":1,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetupRequest","ies":{"establishmentCause":"mo-Data"},"timers":{"start":["T300"]}},{"seq":2,"dir":"DL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCReject","ies":{"waitTime":{"value":10,"unit":"s","verify":true}},"timers":{"stop":["T300"],"start":["T302"]}}],"expectedUE":"No new RRCSetupRequest for mo-Data until T302 expiry; access barring alleviation on expiry"},{"caseId":"WF-08b","name":"RRC setup no response (T300 expiry)","steps":[{"seq":1,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCSetupRequest","ies":{"establishmentCause":"mo-Data"},"timers":{"start":["T300"]}},{"seq":2,"dir":"SS","layer":"RRC","message":"SS does not respond","expect":"T300 expiry; UE informs NAS of failure; connEstFailureControl applied if configured in SIB1"}],"expectedUE":"NAS service request aborted; retry per upper-layer behaviour"},{"caseId":"WF-08c","name":"SERVICE REJECT","steps":[{"seq":"1-4","ref":"WF-01 steps 1-4"},{"seq":5,"dir":"DL","layer":"5GMM","container":"DLInformationTransfer","message":"SERVICE REJECT","ies":{"5GMMCause":"<<parameter>>","pduSessionStatus":"optional","t3346":"for #22"},"timers":{"stop":["T3517"]}},{"seq":6,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCRelease","ref":"defaults.rrc.RRCRelease_Idle"}],"causeMatrix":[{"cause":"#9 UE identity cannot be derived by the network","expectedUE":"Enter 5GMM-DEREGISTERED, delete 5G-GUTI, perform initial registration"},{"cause":"#10 Implicitly de-registered","expectedUE":"Enter 5GMM-DEREGISTERED.NORMAL-SERVICE, initial registration"},{"cause":"#22 Congestion","expectedUE":"Start T3346, no service request until expiry (except exceptions)"},{"cause":"#28 Restricted service area","expectedUE":"Enter 5GMM-REGISTERED.NON-ALLOWED-SERVICE, mobility registration"},{"cause":"#7 5GS services not allowed","expectedUE":"USIM invalid for 5GS services"}]},{"caseId":"WF-08d","name":"Service request no response (T3517 expiry)","steps":[{"seq":"1-4","ref":"WF-01 steps 1-4"},{"seq":5,"dir":"SS","layer":"5GMM","message":"SS does not send SERVICE ACCEPT/REJECT","expect":"T3517 expiry (15 s); UE aborts procedure, releases NAS signalling connection locally"}],"expectedUE":"Return to 5GMM-REGISTERED, retry allowed"},{"caseId":"WF-08e","name":"PDU session reactivation failure","steps":[{"seq":"1-9","ref":"WF-01 steps 1-9 (no DRB for PSI 1)"},{"seq":10,"dir":"DL","layer":"5GMM","message":"SERVICE ACCEPT","ies":{"pduSessionReactivationResult":"PSI(1)=1 (failed)","pduSessionReactivationResultErrorCause":"PSI 1, 5GMM cause #92 insufficient user-plane resources","verify":true}}],"expectedUE":"No user data sent on PSI 1; UE may retry later"}],"passCriteria":["UE behaviour per case/cause, correct timer start/stop"]},{"id":"WF-09","name":"IMS Voice Call Failure","category":"failure-ims-voice","result":"failure","references":["TS 24.229","TS 34.229-1 / 34.229-5","TS 24.501 6.3.2 / 6.4.2"],"preconditions":["As WF-03 preconditions"],"failureCases":[{"caseId":"WF-09a","name":"Remote busy","trigger":"SS answers INVITE with 486 Busy Here after 100 Trying","steps":[{"ref":"WF-03 steps 1-11"},{"dir":"DL","layer":"SIP","message":"486 Busy Here"},{"dir":"UL","layer":"SIP","message":"ACK"}],"expectedUE":"Call ends, user alerted busy; any dedicated QoS flow released by network"},{"caseId":"WF-09b","name":"Temporarily unavailable","trigger":"480 Temporarily Unavailable","expectedUE":"ACK, call cleared"},{"caseId":"WF-09c","name":"Service unavailable / P-CSCF failure","trigger":"503 Service Unavailable (Retry-After) or no response to INVITE","expectedUE":"ACK on 503; on timer F/B expiry UE treats P-CSCF as failed, selects next P-CSCF / re-registers per 24.229"},{"caseId":"WF-09d","name":"Request timeout","trigger":"408 Request Timeout or no final response (SIP timer B, 64*T1)","expectedUE":"Call attempt terminated"},{"caseId":"WF-09e","name":"Dedicated QoS flow not established (preconditions fail)","trigger":"SS does not send PDU SESSION MODIFICATION COMMAND for 5QI 1; preconditions never met","expectedUE":"UE does not send UPDATE with curr:qos sendrecv; call fails / CANCEL sent per implementation"},{"caseId":"WF-09f","name":"UE rejects QoS modification","trigger":"PDU SESSION MODIFICATION COMMAND with semantic error in QoS rule (e.g. invalid packet filter)","steps":[{"dir":"DL","layer":"5GSM","message":"PDU SESSION MODIFICATION COMMAND (erroneous QoS rule)"},{"dir":"UL","layer":"5GSM","message":"PDU SESSION MODIFICATION COMMAND REJECT","ies":{"5GSMCause":"#83 Semantic error in the QoS operation (or #84 syntactical error)"}}],"expectedUE":"QoS flow not created, call setup fails"},{"caseId":"WF-09g","name":"RLF during active call","trigger":"SS drops serving cell during RTP (see WF-12)","expectedUE":"RRC re-establishment; if successful, call continues; else call dropped"},{"caseId":"WF-09h","name":"IMS voice not supported by network","trigger":"REGISTRATION ACCEPT 5GS network feature support IMS VoPS = 0","expectedUE":"UE does not originate VoNR call (domain selection per 24.501/23.221)"}],"passCriteria":["Correct SIP transaction handling and clean release of QoS resources"]},{"id":"WF-10","name":"IMS Video Call Failure","category":"failure-ims-video","result":"failure","references":["TS 24.229","TS 34.229-1 / 34.229-5","TS 26.114"],"preconditions":["As WF-04 preconditions"],"failureCases":[{"caseId":"WF-10a","name":"Video codec not acceptable","trigger":"SS answers INVITE with 488 Not Acceptable Here (video codec)","expectedUE":"ACK; UE may retry voice-only INVITE per implementation"},{"caseId":"WF-10b","name":"Video stream rejected, audio accepted","trigger":"SS 183/200 OK SDP sets video m-line port = 0","expectedUE":"Call continues as voice-only; only QFI 2 used; DRB3 not used/released"},{"caseId":"WF-10c","name":"Video QoS flow not authorised","trigger":"PDU SESSION MODIFICATION COMMAND creates only QFI 2 (5QI 1), no 5QI 2","expectedUE":"Video preconditions not met; video downgraded or removed via UPDATE/re-INVITE"},{"caseId":"WF-10d","name":"Remote busy / unavailable","trigger":"486 / 480 / 603 Decline","expectedUE":"ACK, call cleared, QoS flows released"},{"caseId":"WF-10e","name":"Mid-call video downgrade failure","trigger":"UE sends re-INVITE removing video, SS responds 491 Request Pending","expectedUE":"UE retries re-INVITE after randomised timer per RFC 3261"},{"caseId":"WF-10f","name":"Video DRB setup failure","trigger":"RRCReconfiguration adding DRB3 with configuration UE cannot comply with","expectedUE":"UE initiates RRC re-establishment (reconfigurationFailure); video call setup fails"}],"passCriteria":["Graceful fallback to voice where applicable, no stale QoS flows/DRBs"]},{"id":"WF-11","name":"Handover Failure","category":"failure-mobility","result":"failure","references":["TS 38.331 5.3.5.8.3 T304 expiry (reconfiguration with sync failure)","TS 38.331 5.3.7 RRC re-establishment"],"preconditions":["As WF-05 steps 1-4 completed"],"steps":[{"seq":1,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration (reconfigurationWithSync to Cell 2)","ies":{"t304":{"value":"ms1000","verify":true}},"timers":{"start":["T304"]}},{"seq":2,"dir":"SS","layer":"PHY","message":"Cell 2 does not respond to RA (RAR not sent) or Cell 2 switched off","expect":"T304 expiry"},{"seq":3,"dir":"UE","layer":"RRC","message":"Handover failure detected, revert config, start T311, cell selection","timers":{"start":["T311"]}},{"seq":4,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCReestablishmentRequest (on Cell 1 or suitable cell)","ies":{"ue-Identity.c-RNTI":"source C-RNTI","ue-Identity.physCellId":"source PCI","ue-Identity.shortMAC-I":"computed with source keys","reestablishmentCause":"handoverFailure"},"timers":{"stop":["T311"],"start":["T301"]}},{"seq":5,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReestablishment","ies":{"nextHopChainingCount":"SS value"},"timers":{"stop":["T301"]}},{"seq":6,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReestablishmentComplete","ies":{"rlf-InfoAvailable":"true (if stored)"}},{"seq":7,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ies":{"note":"resume SRB2/DRBs"}},{"seq":8,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":9,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"UEInformationRequest","ies":{"rlf-ReportReq":true},"optional":true},{"seq":10,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"UEInformationResponse","ies":{"rlf-Report.connectionFailureType":"hof","rlf-Report.failedPCellId":"Cell 2"},"optional":true}],"variants":[{"id":"WF-11b","name":"Re-establishment rejected","changes":"SS answers RRCReestablishmentRequest with RRCSetup (fallback) -> UE releases old config, continues with RRCSetupComplete; NAS triggers SERVICE REQUEST / REGISTRATION as needed"},{"id":"WF-11c","name":"T311 expiry","changes":"No suitable cell during T311 -> UE goes to RRC_IDLE, NAS informed"},{"id":"WF-11d","name":"Reconfiguration failure (UE cannot comply)","changes":"Invalid reconfigurationWithSync -> reestablishmentCause reconfigurationFailure"}],"postconditions":["UE RRC_CONNECTED after re-establishment, or RRC_IDLE in variants"],"passCriteria":["T304 expiry correctly handled, reestablishmentCause = handoverFailure"]},{"id":"WF-12","name":"Radio Link Failure","category":"failure-radio","result":"failure-recovered","references":["TS 38.331 5.3.10 Radio link failure","TS 38.331 5.3.7 RRC re-establishment","TS 38.133 RLM"],"preconditions":["UE RRC_CONNECTED on Cell 1 with DRB1 active","RLF-TimersAndConstants per SIB1 ue-TimersAndConstants defaults (t310 ms1000, n310 n1, n311 n1, t311 ms30000) - verify"],"steps":[{"seq":1,"dir":"SS","layer":"PHY","message":"Cell 1 power reduced below Qout (or switched off)","expect":"N310 consecutive out-of-sync indications"},{"seq":2,"dir":"UE","layer":"RRC","message":"Start T310","timers":{"start":["T310"]}},{"seq":3,"dir":"UE","layer":"RRC","message":"T310 expiry -> RLF declared, store RLF report, suspend RBs except SRB0, start T311","timers":{"start":["T311"]}},{"seq":4,"dir":"SS","layer":"PHY","message":"Cell 1 restored (or Cell 2 suitable)"},{"seq":5,"dir":"UL","layer":"RRC","channel":"SRB0/CCCH","message":"RRCReestablishmentRequest","ies":{"ue-Identity.c-RNTI":"source C-RNTI","ue-Identity.physCellId":"Cell 1 PCI","ue-Identity.shortMAC-I":"computed","reestablishmentCause":"otherFailure"},"timers":{"stop":["T311"],"start":["T301"]}},{"seq":6,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReestablishment","ies":{"nextHopChainingCount":"SS value"},"timers":{"stop":["T301"]}},{"seq":7,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReestablishmentComplete","ies":{"rlf-InfoAvailable":true}},{"seq":8,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfiguration","ies":{"note":"resume SRB2 and DRB1"}},{"seq":9,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"RRCReconfigurationComplete"},{"seq":10,"dir":"DL","layer":"RRC","channel":"SRB1/DCCH","message":"UEInformationRequest","ies":{"rlf-ReportReq":true}},{"seq":11,"dir":"UL","layer":"RRC","channel":"SRB1/DCCH","message":"UEInformationResponse","ies":{"rlf-Report.connectionFailureType":"rlf","rlf-Report.rlf-Cause":"t310-Expiry","rlf-Report.measResultLastServCell":"Cell 1 RSRP/RSRQ"}},{"seq":12,"dir":"UL","layer":"UP","channel":"DRB","message":"User data resumes"}],"variants":[{"id":"WF-12b","name":"RLF due to RLC max retransmissions","changes":"SS withholds RLC ACKs -> maxRetxThreshold reached -> rlf-Cause rlc-MaxNumRetx"},{"id":"WF-12c","name":"RLF due to random access problem","changes":"SS ignores preambles -> preambleTransMax reached -> rlf-Cause randomAccessProblem"},{"id":"WF-12d","name":"Beam failure recovery (pre-RLF)","changes":"SS degrades serving beam -> BFR via CFRA/CBRA, no RLF"},{"id":"WF-12e","name":"No recovery","changes":"No suitable cell during T311 -> RRC_IDLE; NAS SERVICE REQUEST on return"}],"postconditions":["UE RRC_CONNECTED, DRB1 restored"],"passCriteria":["RLF declared at T310 expiry","Re-establishment cause otherFailure","RLF report content correct"]}]};
+
+/* Ladder branch sets: every branch names its library workflow (`wf`). */
+const LADDER_MOVES = {
+  l1: [
+    { name: 'Initial registration', strength: 0.90, target: 'regLat', wf: { id: 'WF-07', baseline: 'accept' }, tip: 'Complete registration within latency target' },
+    { name: 'REJECT #3 Illegal UE', strength: 0.98, target: 'regRej', wf: { id: 'WF-07', cause: '#3' }, tip: 'Treat USIM as invalid; no further attempts' },
+    { name: 'REJECT #7 5GS not allowed', strength: 0.97, target: 'regRej', wf: { id: 'WF-07', cause: '#7' }, tip: 'Stop 5GS service attempts cleanly' },
+    { name: 'REJECT #11 PLMN not allowed', strength: 1.00, target: 'retries', wf: { id: 'WF-07', cause: '#11' }, tip: 'Forbid the PLMN and reselect' },
+    { name: 'REJECT #12 TA not allowed', strength: 1.00, target: 'regRej', wf: { id: 'WF-07', cause: '#12' }, tip: 'Forbid the TA; limited service' },
+    { name: 'REJECT #13 Roaming not allowed', strength: 1.01, target: 'retries', wf: { id: 'WF-07', cause: '#13' }, tip: 'Forbid the TA for roaming; PLMN selection' },
+    { name: 'REJECT #15 No suitable cells', strength: 1.02, target: 'retries', wf: { id: 'WF-07', cause: '#15' }, tip: 'Search another TA in the same PLMN' },
+    { name: 'REJECT #22 + T3346', strength: 1.06, target: 'retries', wf: { id: 'WF-07', cause: '#22' }, tip: 'Back off for T3346 before retrying' },
+    { name: 'REJECT #27 N1 mode not allowed', strength: 1.01, target: 'regRej', wf: { id: 'WF-07', cause: '#27' }, tip: 'Disable N1 mode for 3GPP access' },
+    { name: 'REJECT #62 No slices available', strength: 1.02, target: 'regRej', wf: { id: 'WF-07', cause: '#62' }, tip: 'Store rejected NSSAI; no same-NSSAI retry' },
+    { name: 'No response · T3510 ×5', strength: 1.10, target: 'timeouts', wf: { id: 'WF-07', cause: 'No response' }, tip: 'Retry on T3510, then back off with T3502' },
+    { name: 'Auth MAC failure #20', strength: 1.03, target: 'regRej', wf: { id: 'WF-07', variant: 'WF-07b' }, tip: 'Send AUTHENTICATION FAILURE #20' },
+    { name: 'Auth synch failure #21', strength: 1.04, target: 'retries', wf: { id: 'WF-07', variant: 'WF-07b' }, tip: 'Send AUTHENTICATION FAILURE #21 + AUTS' },
+    { name: 'NAS SMC reject #23', strength: 1.05, target: 'timeouts', wf: { id: 'WF-07', variant: 'WF-07c' }, tip: 'Send SECURITY MODE REJECT #23' },
+  ],
+  l2: [
+    { name: 'MO data call', strength: 0.90, target: 'setupLat', wf: { id: 'WF-01' }, tip: 'Service accepted; data on QFI 1' },
+    { name: 'MT data call (paging)', strength: 0.95, target: 'setupLat', wf: { id: 'WF-02' }, tip: 'Answer paging with mt-Access; receive DL data' },
+    { name: 'RRC reject + T302', strength: 1.00, target: 'sessRej', wf: { id: 'WF-08', case: 'WF-08a' }, tip: 'No mo-Data RRCSetupRequest until T302 expires' },
+    { name: 'RRC setup no response · T300', strength: 1.02, target: 'setupLat', wf: { id: 'WF-08', case: 'WF-08b' }, tip: 'Abort the service request on T300 expiry' },
+    { name: 'SERVICE REJECT #9 / #10', strength: 1.03, target: 'sessRej', wf: { id: 'WF-08', case: 'WF-08c', causes: ['#9', '#10'] }, tip: 'Deregister and register again' },
+    { name: 'SERVICE REJECT #22 + T3346', strength: 1.05, target: 'fallbacks', wf: { id: 'WF-08', case: 'WF-08c', causes: ['#22'] }, tip: 'No service request until T3346 expires' },
+    { name: 'SERVICE REJECT #28 / #7', strength: 1.04, target: 'sessRej', wf: { id: 'WF-08', case: 'WF-08c', causes: ['#28', '#7'] }, tip: 'Non-allowed area or USIM invalid for 5GS' },
+    { name: 'No response · T3517', strength: 1.07, target: 'sessDrops', wf: { id: 'WF-08', case: 'WF-08d' }, tip: 'Abort after T3517; stay 5GMM-REGISTERED' },
+    { name: 'PDU reactivation failure #92', strength: 1.08, target: 'sessDrops', wf: { id: 'WF-08', case: 'WF-08e' }, tip: 'Send no user data on PSI 1' },
+  ],
+  l3: [
+    { name: 'Intra-frequency handover', strength: 0.90, target: 'interrupt', wf: { id: 'WF-05' }, tip: 'Report on A3; complete before T304' },
+    { name: 'Too-early trigger (bad leader)', strength: 1.02, target: 'hoSucc', wf: { id: 'WF-05', retune: 'early' }, tip: 'Hand over without a drop or return' },
+    { name: 'Too-late trigger (bad leader)', strength: 1.06, target: 'rlf', wf: { id: 'WF-05', retune: 'late' }, tip: 'Recover before RLF or re-establish' },
+    { name: 'Ping-pong (bad leader)', strength: 1.04, target: 'pingpong', wf: { id: 'WF-05', retune: 'pingpong' }, tip: 'Avoid bouncing between Cell 1 and Cell 2' },
+    { name: 'Inter-frequency handover', strength: 1.00, target: 'interrupt', wf: { id: 'WF-05', variant: 'WF-05b' }, tip: 'Measure target ARFCN, gaps if needed' },
+    { name: 'Handover into new TA', strength: 1.03, target: 'hoSucc', wf: { id: 'WF-05', variant: 'WF-05c' }, tip: 'Hand over to Cell 3, then mobility registration' },
+    { name: 'Idle-mode reselection', strength: 0.95, target: 'hoSucc', wf: { id: 'WF-06' }, tip: 'Reselect to Cell 2 and answer paging there' },
+    { name: 'Reselection into new TA', strength: 1.00, target: 'hoSucc', wf: { id: 'WF-06', variant: 'WF-06b' }, tip: 'Mobility registration with new TAI list' },
+    { name: 'Priority-based reselection', strength: 1.00, target: 'interrupt', wf: { id: 'WF-06', variant: 'WF-06c' }, tip: 'Follow SIB4 priorities and thresholds' },
+    { name: 'Handover failure · T304', strength: 1.07, target: 'rlf', wf: { id: 'WF-11' }, tip: 'Re-establish with cause handoverFailure' },
+    { name: 'Re-establishment → RRCSetup', strength: 1.05, target: 'sessDrops', wf: { id: 'WF-11', variant: 'WF-11b' }, tip: 'Drop old config; continue with RRCSetupComplete' },
+    { name: 'No suitable cell · T311', strength: 1.08, target: 'sessDrops', wf: { id: 'WF-11', variant: 'WF-11c' }, tip: 'Go to RRC_IDLE and inform NAS' },
+    { name: 'Invalid reconfigurationWithSync', strength: 1.05, target: 'hoSucc', wf: { id: 'WF-11', variant: 'WF-11d' }, tip: 'Re-establish with reconfigurationFailure' },
+    { name: 'Radio link failure · T310', strength: 1.07, target: 'rlf', wf: { id: 'WF-12' }, tip: 'Declare RLF at T310; re-establish' },
+    { name: 'RLF · RLC max retx', strength: 1.06, target: 'rlf', wf: { id: 'WF-12', variant: 'WF-12b' }, tip: 'rlf-Cause rlc-MaxNumRetx' },
+    { name: 'RLF · random access problem', strength: 1.06, target: 'rlf', wf: { id: 'WF-12', variant: 'WF-12c' }, tip: 'rlf-Cause randomAccessProblem' },
+    { name: 'Beam failure recovery', strength: 1.02, target: 'interrupt', wf: { id: 'WF-12', variant: 'WF-12d' }, tip: 'Recover the beam with no RLF' },
+    { name: 'No recovery after RLF', strength: 1.09, target: 'sessDrops', wf: { id: 'WF-12', variant: 'WF-12e' }, tip: 'RRC_IDLE; SERVICE REQUEST on return' },
+  ],
+  l5: [
+    { name: 'VoNR MO call', strength: 0.90, target: 'callSetup', wf: { id: 'WF-03' }, tip: '5QI 1 flow before 180/200; clean release' },
+    { name: 'ViNR MO call', strength: 0.95, target: 'callSetup', wf: { id: 'WF-04' }, tip: '5QI 1 and 5QI 2 flows on separate DRBs' },
+    { name: 'Remote busy (486)', strength: 1.00, target: 'sipErr', wf: { id: 'WF-09', case: 'WF-09a' }, tip: 'End the call; QoS flow released' },
+    { name: 'Temporarily unavailable (480)', strength: 1.00, target: 'sipErr', wf: { id: 'WF-09', case: 'WF-09b' }, tip: 'ACK and clear the call' },
+    { name: 'Service unavailable (503)', strength: 1.04, target: 'sipErr', wf: { id: 'WF-09', case: 'WF-09c' }, tip: 'Select the next P-CSCF or re-register' },
+    { name: 'Request timeout (408)', strength: 1.03, target: 'callSetup', wf: { id: 'WF-09', case: 'WF-09d' }, tip: 'Terminate the call attempt' },
+    { name: 'No dedicated QoS flow', strength: 1.05, target: 'qosFail', wf: { id: 'WF-09', case: 'WF-09e' }, tip: 'No UPDATE with curr:qos; fail or CANCEL' },
+    { name: 'UE rejects bad QoS rule', strength: 1.04, target: 'qosFail', wf: { id: 'WF-09', case: 'WF-09f' }, tip: 'Do not create the QoS flow' },
+    { name: 'RLF during active call', strength: 1.08, target: 'callDrops', wf: { id: 'WF-09', case: 'WF-09g' }, tip: 'Re-establish and continue, or drop cleanly' },
+    { name: 'IMS VoPS not supported', strength: 0.98, target: 'callSucc', wf: { id: 'WF-09', case: 'WF-09h' }, tip: 'Do not originate a VoNR call' },
+    { name: 'Video codec rejected (488)', strength: 1.02, target: 'sipErr', wf: { id: 'WF-10', case: 'WF-10a' }, tip: 'ACK; may retry voice-only' },
+    { name: 'Video m-line rejected', strength: 1.01, target: 'qosFail', wf: { id: 'WF-10', case: 'WF-10b' }, tip: 'Continue voice-only on QFI 2' },
+    { name: 'Video QoS not authorised', strength: 1.04, target: 'qosFail', wf: { id: 'WF-10', case: 'WF-10c' }, tip: 'Downgrade or remove video' },
+    { name: 'Video call declined', strength: 1.00, target: 'sipErr', wf: { id: 'WF-10', case: 'WF-10d' }, tip: 'ACK; release QoS flows' },
+    { name: 'Downgrade glare (491)', strength: 1.05, target: 'callSetup', wf: { id: 'WF-10', case: 'WF-10e' }, tip: 'Retry re-INVITE after a random timer' },
+    { name: 'Video DRB setup failure', strength: 1.07, target: 'callDrops', wf: { id: 'WF-10', case: 'WF-10f' }, tip: 'Re-establish with reconfigurationFailure' },
+  ],
+};
+
+/* ==================================================================
    DATA — embedded sample data (no backend)
    ================================================================== */
 const DATA = {
+  workflows: WORKFLOW_LIBRARY,
   games: [
     { key: 'signalling', name: 'Signalling Storm', desc: 'Floods RACH and RRC setup from a massive UE cohort to saturate signalling.',
       tags: ['rach', 'rejects', 'latency'], mix: [0.25, 0.30, 0.45],
@@ -736,6 +993,60 @@ const DATA = {
       moves: [ { name: 'GBR 50 Mbps demand', strength: 0.95, target: 'prb' }, { name: 'GBR ramp ×2', strength: 1.10, target: 'drops' },
                { name: '5QI-1 VoNR surge', strength: 1.01, target: 'rejects' }, { name: 'PRB hog eMBB', strength: 1.05, target: 'prb' } ] },
   ],
+  // Procedure Ladder (PRD M10). Branches run in order; the first is always the baseline.
+  ladder: [
+    { key: 'l1', level: 1, proc: 'Registration', name: 'Registration', short: 'L1 Registration',
+      desc: 'Breaks the registration tree at every node: reject causes, auth failures, SMC reject, T3510.',
+      workflows: ['WF-07'],
+      model: 'Sequential game · subgame perfection', modelShort: 'Sequential', modelCard: 'Sequential game',
+      explainer: 'The DUT must be correct at every node of the procedure tree, including off-path branches. The happy path alone proves little.',
+      kpis: ['regSucc', 'regLat', 'retries', 'regRej', 'timeouts'], tags: ['regSucc', 'regRej', 'timeouts'], mix: [0.20, 0.30, 0.50],
+      state: [{ label: 'Attempts', get: g => `${int(g.attempts)} /s` }, { label: 'Rejects', get: g => `${int(g.kpis.regRej)} /s` }, { label: 'Timeouts', get: g => `${int(g.kpis.timeouts)} /s` }],
+      reward: [{ label: 'Wrong recovery', kpi: 'regRej' }, { label: 'Latency', kpi: 'regLat' }, { label: 'Hang', kpi: 'timeouts' }],
+      moves: LADDER_MOVES.l1 },
+    { key: 'l2', level: 2, proc: 'Data Call', name: 'Data Call', short: 'L2 Data Call',
+      desc: 'Brings up MO and MT data, then rejects, stalls or half-accepts the service request.',
+      workflows: ['WF-01', 'WF-02', 'WF-08'],
+      model: 'Coordination game · miscoordination', modelShort: 'Coordination', modelCard: 'Coordination game',
+      explainer: 'UE and network must agree to bring up service. Test the miscoordination cells (reject, no response, partial accept), not just the agreed one.',
+      kpis: ['sessSucc', 'setupLat', 'fallbacks', 'sessRej', 'sessDrops'], tags: ['sessSucc', 'sessRej', 'sessDrops'], mix: [0.25, 0.55, 0.20],
+      state: [{ label: 'Session req.', get: g => `${int(g.attempts)} /s` }, { label: 'Fallbacks', get: g => `${int(g.kpis.fallbacks)} /s` }, { label: 'Rejects', get: g => `${int(g.kpis.sessRej)} /s` }],
+      reward: [{ label: 'Miscoordination', kpi: 'sessRej' }, { label: 'Latency', kpi: 'setupLat' }, { label: 'Drop', kpi: 'sessDrops' }],
+      moves: LADDER_MOVES.l2 },
+    { key: 'l3', level: 3, proc: 'Handover & Mobility', name: 'Handover & Mobility', short: 'L3 Handover',
+      desc: 'Plays a bad leader on A3, then breaks handover, reselection and the radio link.',
+      workflows: ['WF-05', 'WF-06', 'WF-11', 'WF-12'],
+      model: 'Stackelberg game · leader–follower', modelShort: 'Stackelberg', modelCard: 'Stackelberg game',
+      explainer: 'The network leads by setting trigger parameters and the UE follows. The tester plays a bad leader, then breaks the handover to test recovery.',
+      kpis: ['hoSucc', 'interrupt', 'pingpong', 'rlf', 'sessDrops'], tags: ['hoSucc', 'pingpong', 'rlf'], mix: [0.30, 0.55, 0.15],
+      state: [{ label: 'HO attempts', get: g => `${int(g.hoRate)} /min` }, { label: 'Ping-pongs', get: g => `${int(g.hoRate * g.kpis.pingpong / 100)} /min` }, { label: 'RLF', get: g => `${int(g.kpis.rlf)} /min` }],
+      reward: [{ label: 'HO failure', kpi: 'hoSucc' }, { label: 'Interruption', kpi: 'interrupt' }, { label: 'Drop', kpi: 'sessDrops' }],
+      moves: LADDER_MOVES.l3 },
+    { key: 'l4', level: 4, proc: 'Throughput', name: 'Throughput', short: 'L4 Throughput',
+      desc: 'Shares PRBs across competing users and a hostile channel to test speed and fairness.',
+      workflows: ['WF-01'],
+      model: 'Congestion game · Nash bargaining', modelShort: 'Congestion', modelCard: 'Congestion game',
+      explainer: 'Users compete for PRBs. Proportional-fair scheduling matches the Nash Bargaining Solution, so efficiency and fairness both count.',
+      kpis: ['cellTput', 'ueP5', 'fairness', 'bler', 'prb'], tags: ['cellTput', 'fairness', 'bler'], mix: [0.15, 0.70, 0.15],
+      state: [{ label: 'Active UEs', get: g => int(g.active.urllc + g.active.embb + g.active.mmtc) }, { label: 'PRB', get: g => `${g.kpis.prb.toFixed(1)}%` }, { label: 'BLER', get: g => `${g.kpis.bler.toFixed(1)}%` }],
+      reward: [{ label: 'Throughput gap', kpi: 'cellTput' }, { label: 'Unfairness', kpi: 'fairness' }, { label: 'BLER', kpi: 'bler' }],
+      moves: [
+        { name: 'Single-UE peak', strength: 0.90, target: 'cellTput', tip: 'Reach peak throughput for one UE' },
+        { name: 'Load ramp', strength: 1.03, target: 'prb', tip: 'Hold cell throughput as UEs are added' },
+        { name: 'Mixed GBR priority', strength: 1.04, target: 'ueP5', tip: 'Serve GBR users without starving the rest' },
+        { name: 'High-CQI hog', strength: 1.06, target: 'fairness', tip: 'Keep fairness when one strong UE pushes' },
+        { name: 'Channel fade (Nature)', strength: 1.08, target: 'bler', tip: 'Pick the right MCS as SINR drops' },
+      ] },
+    { key: 'l5', level: 5, proc: 'IMS Voice & Video', name: 'IMS Voice & Video', short: 'L5 IMS Call',
+      desc: 'Places VoNR and ViNR calls, then rejects, counters or stalls the SIP/SDP offer.',
+      workflows: ['WF-03', 'WF-04', 'WF-09', 'WF-10'],
+      model: 'Bargaining game · alternating offers', modelShort: 'Bargaining', modelCard: 'Bargaining game',
+      explainer: 'SIP/SDP offer–answer and QoS preconditions are offers and counter-offers. The DUT must settle, fall back or release resources cleanly.',
+      kpis: ['callSucc', 'callSetup', 'qosFail', 'sipErr', 'callDrops'], tags: ['callSucc', 'sipErr', 'callDrops'], mix: [0.45, 0.45, 0.10],
+      state: [{ label: 'Call attempts', get: g => `${int(g.attempts)} /s` }, { label: 'SIP errors', get: g => `${int(g.kpis.sipErr)} /s` }, { label: 'QoS failures', get: g => `${int(g.kpis.qosFail)} /min` }],
+      reward: [{ label: 'Failed call', kpi: 'callSucc' }, { label: 'Setup time', kpi: 'callSetup' }, { label: 'Drop', kpi: 'callDrops' }],
+      moves: LADDER_MOVES.l5 },
+  ],
   difficulty: ['easy', 'normal', 'hard', 'brutal'],
   captures: [
     { id: 'CAP-2026-0412', location: 'Tokyo · Shinjuku',      date: '2026-09-14', feature: 'signalling',  profile: 'Dense urban, evening peak' },
@@ -748,6 +1059,16 @@ const DATA = {
     { id: 'CAP-2026-0466', location: 'Paris · La Défense',     date: '2026-10-13', feature: 'gbr',         profile: 'VoNR at commute peak' },
     { id: 'CAP-2026-0471', location: 'Nagoya · Station',       date: '2026-10-16', feature: 'signalling',  profile: 'Train arrival burst' },
     { id: 'CAP-2026-0479', location: 'Manchester · Etihad',    date: '2026-10-20', feature: 'gbr',         profile: 'Event uplink' },
+    { id: 'CAP-2026-0484', location: 'Tokyo · Haneda',         date: '2026-10-21', feature: 'l1',          profile: 'Roamer attach after landing' },
+    { id: 'CAP-2026-0488', location: 'Frankfurt · Hbf',        date: '2026-10-22', feature: 'l1',          profile: 'Reject #22 congestion window' },
+    { id: 'CAP-2026-0491', location: 'Singapore · Marina',     date: '2026-10-23', feature: 'l2',          profile: 'Enterprise slice PDU mix' },
+    { id: 'CAP-2026-0495', location: 'Milan · Centrale',       date: '2026-10-24', feature: 'l2',          profile: 'IPv4-only APN legacy core' },
+    { id: 'CAP-2026-0498', location: 'Shinkansen · Tōkaidō',   date: '2026-10-25', feature: 'l3',          profile: 'High-speed rail handovers' },
+    { id: 'CAP-2026-0502', location: 'London · M25 J16',       date: '2026-10-26', feature: 'l3',          profile: 'Motorway cell-edge ping-pong' },
+    { id: 'CAP-2026-0507', location: 'Seoul · COEX',           date: '2026-10-27', feature: 'l4',          profile: 'Mixed GBR at expo peak' },
+    { id: 'CAP-2026-0511', location: 'Madrid · Bernabéu',      date: '2026-10-28', feature: 'l4',          profile: 'Uplink video vs downlink fans' },
+    { id: 'CAP-2026-0516', location: 'Tokyo · Marunouchi',     date: '2026-10-29', feature: 'l5',          profile: 'VoNR commute peak, P-CSCF failover' },
+    { id: 'CAP-2026-0520', location: 'Dublin · Docklands',     date: '2026-10-30', feature: 'l5',          profile: 'ViNR enterprise calls, codec mismatch' },
   ],
   sampleRuns: [ // reports are completed at start-up from the seed
     { n: 34, dut: 'gNB-X sw 4.2.0', game: 'signalling', difficulty: 'hard', target: 'gnb', outcome: 'DUT DOWN', durationSec: 462, score: 8412, startedAt: '2026-10-20T09:14:00', seed: '3fa91c07', fail: 'rejects' },
@@ -759,17 +1080,214 @@ const DATA = {
     { n: 39, dut: 'gNB-Kanto-Cluster-07 sw 5.0.3-rc2 nightly build 2026-10-25', game: 'retry', difficulty: 'brutal', target: 'gnb', outcome: 'DUT DOWN', durationSec: 217, score: 3618, startedAt: '2026-10-26T10:05:00', seed: 'e6b1f840', fail: 'rach' },
     { n: 40, dut: 'gNB-X sw 4.2.2', game: 'smallpacket', difficulty: 'normal', target: 'gnb', outcome: 'DUT DOWN', durationSec: 1275, score: 9844, startedAt: '2026-10-27T19:30:00', seed: '2a9c66f1', fail: 'latency' },
     { n: 41, dut: 'Modem-M3 fw 2.0.1', game: 'gbr', difficulty: 'hard', target: 'modem', outcome: 'STOPPED', durationSec: 2700, score: 7215, startedAt: '2026-10-28T13:12:00', seed: 'f15b3d28' },
+    { n: 42, dut: 'gNB-X sw 4.2.2', game: 'l1', difficulty: 'easy', target: 'gnb', outcome: 'LEVEL CLEAR', durationSec: 64, score: 1890, startedAt: '2026-10-29T10:05:00', seed: '8d41a2c3' },
+    { n: 43, dut: 'gNB-X sw 4.2.2', game: 'l2', difficulty: 'normal', target: 'gnb', outcome: 'LEVEL CLEAR', durationSec: 118, score: 4120, startedAt: '2026-10-29T10:20:00', seed: '1c7e9b04' },
+    { n: 44, dut: 'gNB-X sw 4.2.2', game: 'l3', difficulty: 'hard', target: 'gnb', outcome: 'DUT DOWN', durationSec: 203, score: 6011, startedAt: '2026-10-29T10:41:00', seed: 'b38f50e6', fail: 'rlf' },
+    { n: 45, dut: 'Modem-M3 fw 2.0.1', game: 'l1', difficulty: 'normal', target: 'modem', outcome: 'STOPPED', durationSec: 48, score: 1102, startedAt: '2026-10-30T09:12:00', seed: '5a06d7f9' },
+    { n: 46, dut: 'Modem-M3 fw 2.0.1', game: 'l2', difficulty: 'hard', target: 'modem', outcome: 'PLATFORM ERROR', durationSec: 77, score: 1650, startedAt: '2026-10-30T09:30:00', seed: 'e2c95a18',
+      reason: 'Core emulator stopped answering NAS after 77 s; the DUT is not at fault' },
+    { n: 47, dut: 'gNB-X sw 4.2.2', game: 'l5', difficulty: 'easy', target: 'gnb', outcome: 'LEVEL CLEAR', durationSec: 71, score: 2280, startedAt: '2026-10-31T11:02:00', seed: '4c2be917' },
   ],
 };
 
-const KPIS = [
-  { key: 'rach',    label: 'RACH success',    unit: '%',  sep: '',  dec: 1, min: 50, max: 100 },
-  { key: 'prb',     label: 'PRB utilisation', unit: '%',  sep: '',  dec: 1, min: 0,  max: 100 },
-  { key: 'rejects', label: 'Rejects',         unit: '/s', sep: ' ', dec: 0, min: 0,  max: 320 },
-  { key: 'latency', label: 'Latency p95',     unit: 'ms', sep: ' ', dec: 1, min: 0,  max: 40 },
-  { key: 'drops',   label: 'Drops',           unit: '/s', sep: ' ', dec: 0, min: 0,  max: 60 },
+// Shared shape for the four stress games (they all use the standard KPI set and Stackelberg model).
+DATA.games.forEach(g => Object.assign(g, {
+  kind: 'stress', short: g.name,
+  model: 'Stackelberg · leader–follower', modelShort: 'Stackelberg',
+  explainer: 'The cohort leads with a stress move and the DUT follows. The agent learns which moves push the DUT hardest and escalates.',
+  kpis: ['rach', 'prb', 'rejects', 'latency', 'drops'],
+  state: [{ label: 'RACH', get: g2 => `${int(g2.attempts)} /s` }, { label: 'PRB', get: g2 => `${g2.kpis.prb.toFixed(1)}%` }, { label: 'Rejects', get: g2 => `${int(g2.kpis.rejects)} /s` }],
+  reward: [{ label: 'Reject', kpi: 'rejects' }, { label: 'Latency', kpi: 'latency' }, { label: 'Drop', kpi: 'drops' }],
+}));
+DATA.ladder.forEach(g => { g.kind = 'ladder'; });
+
+/* ==================================================================
+   WORKFLOW LIBRARY — resolves a ladder branch's `wf` reference into the
+   ordered message steps, the injection step and the expected behaviour.
+   Everything is read from DATA.workflows; nothing is retyped.
+   ================================================================== */
+const WF_OK = !!(DATA.workflows && DATA.workflows.schema === 'test-arena.signalling-workflows' && /^1\./.test(String(DATA.workflows.schemaVersion)) && Array.isArray(DATA.workflows.workflows));
+const WFX = WF_OK ? Object.fromEntries(DATA.workflows.workflows.map(w => [w.id, w])) : {};
+const DIR_GLYPH = { UL: '↑', DL: '↓', SS: '⚑', UE: '●' };
+const DIR_LABEL = { UL: 'uplink', DL: 'downlink', SS: 'simulator action', UE: 'UE event' };
+const wfRefRe = /^(WF-\d+)\s+steps?\s+(\d+)\s*-\s*(\d+)/;
+
+function stepCopy(s, from) { return { seq: s.seq, dir: s.dir || '', layer: s.layer || '', channel: s.channel || '', message: s.message || '', container: s.container || '', timers: s.timers || null, optional: !!s.optional, from }; }
+/* steps of a workflow with `extends` and `ref` expanded */
+function baseSteps(id, seen = new Set()) {
+  const w = WFX[id]; if (!w || seen.has(id)) return [];
+  seen.add(id);
+  if (w.steps) return expandSteps(w.steps, id, seen);
+  if (w.extends) {
+    const over = Object.fromEntries((w.stepOverrides || []).map(o => [String(o.seq), o]));
+    return baseSteps(w.extends, seen).map(s => { const o = over[String(s.seq)]; return o && o.message ? { ...s, message: o.message, from: id } : { ...s, from: id }; });
+  }
+  return [];
+}
+function expandSteps(steps, owner, seen = new Set()) {
+  const out = [];
+  steps.forEach(s => {
+    const m = !s.message && typeof s.ref === 'string' && wfRefRe.exec(s.ref);
+    if (m) { baseSteps(m[1], new Set(seen)).filter(x => +x.seq >= +m[2] && +x.seq <= +m[3]).forEach(x => out.push({ ...x, from: m[1], expanded: true })); }
+    else out.push(stepCopy(s, owner));
+  });
+  return out;
+}
+function guessLayer(t) {
+  if (/PDU SESSION|QoS/i.test(t)) return '5GSM';
+  if (/REGISTRATION|SERVICE|AUTHENTICATION|SECURITY MODE/.test(t)) return '5GMM';
+  if (/INVITE|SDP|SIP|codec|P-CSCF|\b[1-6]\d\d\b/.test(t)) return 'SIP';
+  if (/RRC|cell|DRB|preamble|beam|RLC|meas|SIB|ARFCN|TAC|handover|reselect|T3\d\d/i.test(t)) return 'RRC';
+  return 'RRC';
+}
+function precondWorkflow(w) { const m = /(WF-\d+)/.exec((w.preconditions || []).join(' ')); return m ? m[1] : null; }
+/* where a trigger-only failure case cuts into its base call flow */
+function cutFor(trigger, steps) {
+  const idx = f => { const i = steps.findIndex(f); return i < 0 ? steps.length : i + 1; };
+  if (/REGISTRATION ACCEPT/.test(trigger)) return 0;
+  if (/RTP|re-INVITE/.test(trigger)) return idx(s => s.layer === 'RTP');
+  if (/RRCReconfiguration/.test(trigger)) return idx(s => /PDU SESSION MODIFICATION COMMAND/.test(s.message));
+  return idx(s => s.message === '100 Trying');
+}
+const join = (a, sep = '; ') => (Array.isArray(a) ? a.join(sep) : String(a || ''));
+function causeEntries(matrix, codes) { return (matrix || []).filter(c => codes.some(code => c.cause.startsWith(code))); }
+
+/* resolve a branch → { label, steps, inject (index or -1), expected, synthetic, wfIds } */
+function resolveFlow(br) {
+  const ref = br.wf;
+  if (!ref || !WF_OK) return { label: '—', steps: [], inject: -1, expected: br.tip || '', synthetic: false, wfIds: [] };
+  const w = WFX[ref.id];
+  if (!w) return { label: ref.id + ' ?', steps: [], inject: -1, expected: '', synthetic: false, wfIds: [], missing: true };
+  let steps = [], inject = -1, expected = '', label = ref.id, synthetic = false;
+  const failure = /^failure/.test(w.category);
+  if (ref.baseline === 'accept') { // G17: no successful-registration workflow yet
+    steps = baseSteps(w.id).filter(s => +s.seq <= 4);
+    steps.push({ seq: 5, dir: 'DL', layer: '5GMM', message: 'REGISTRATION ACCEPT', container: 'DLInformationTransfer', timers: { stop: ['T3510'] }, synthetic: true, from: w.id });
+    steps.push({ seq: 6, dir: 'UL', layer: '5GMM', message: 'REGISTRATION COMPLETE', container: 'ULInformationTransfer', timers: null, synthetic: true, from: w.id });
+    synthetic = true; label = `${w.id} · accept`;
+    expected = 'Registration completes and T3510 stops (no successful-registration workflow in the library yet)';
+  } else if (ref.case) {
+    const c = (w.failureCases || []).find(x => x.caseId === ref.case) || {};
+    label = ref.case;
+    if (c.steps) {
+      steps = expandSteps(c.steps, ref.case);
+      const ownDL = steps.findIndex(s => !s.expanded && s.dir === 'DL');
+      inject = steps.findIndex(s => s.dir === 'SS');
+      if (inject < 0 && ref.causes) inject = steps.findIndex(s => /REJECT/.test(s.message));
+      if (inject < 0) inject = ownDL >= 0 ? ownDL : steps.findIndex(s => !s.expanded);
+    } else {
+      const base = baseSteps(precondWorkflow(w) || '');
+      steps = base.slice(0, cutFor(c.trigger || '', base)).map(s => ({ ...s, expanded: true }));
+      steps.push({ seq: '', dir: 'SS', layer: guessLayer(c.trigger || ''), message: c.trigger || c.name, timers: null, from: ref.case });
+      inject = steps.length - 1;
+    }
+    if (ref.causes) {
+      const ce = causeEntries(c.causeMatrix, ref.causes);
+      label = `${ref.case} · ${ref.causes.join('/')}`;
+      if (inject >= 0) steps[inject] = { ...steps[inject], note: '5GMM cause ' + ce.map(e => e.cause).join(' / ') };
+      expected = ce.map(e => `${e.cause.split(' ')[0]}: ${e.expectedUE}`).join(' · ');
+    } else expected = c.expectedUE || join(w.passCriteria);
+  } else if (ref.cause) {
+    const ce = causeEntries(w.causeMatrix, [ref.cause])[0] || { cause: ref.cause, expectedUE: '' };
+    label = `${w.id} · ${ref.cause}`;
+    const all = baseSteps(w.id);
+    if (/^No response/.test(ce.cause)) {
+      steps = all.filter(s => +s.seq <= 4);
+      steps.push({ seq: '', dir: 'SS', layer: '5GMM', message: ce.cause, timers: null, from: w.id });
+      inject = steps.length - 1;
+    } else {
+      steps = all;
+      inject = steps.findIndex(s => /REJECT/.test(s.message));
+      if (inject >= 0) steps[inject] = { ...steps[inject], note: '5GMM cause ' + ce.cause };
+    }
+    expected = ce.expectedUE;
+  } else if (ref.variant) {
+    const v = (w.variants || []).find(x => x.id === ref.variant) || { name: ref.variant, changes: '' };
+    label = ref.variant;
+    const base = baseSteps(w.id);
+    const vs = { seq: '', dir: 'SS', layer: guessLayer(v.changes), message: `${v.name}: ${v.changes}`, timers: null, from: ref.variant };
+    const firstSS = base.findIndex(s => s.dir === 'SS');
+    if (w.causeMatrix) { steps = base.filter(s => +s.seq <= 4); steps.push(vs); inject = steps.length - 1; }
+    else if (failure && firstSS >= 0) { steps = base.slice(); steps[firstSS] = vs; inject = firstSS; }
+    else { const at = firstSS >= 0 ? firstSS : 0; steps = [...base.slice(0, at), vs, ...base.slice(at)]; inject = at; }
+    expected = join(w.passCriteria);
+  } else {
+    steps = baseSteps(w.id);
+    expected = join(w.passCriteria);
+    if (ref.retune) {
+      label = `${w.id} · A3 ${ref.retune}`;
+      inject = steps.findIndex(s => /RRCReconfiguration/.test(s.message));
+      const what = { early: 'a3-Offset lowered, TTT ms0', late: 'a3-Offset raised, TTT ms640', pingpong: 'hysteresis 0, TTT ms0' }[ref.retune];
+      if (inject >= 0) steps[inject] = { ...steps[inject], note: `A3 re-tune (bad leader): ${what}` };
+    } else if (failure) inject = steps.findIndex(s => s.dir === 'SS');
+  }
+  steps = steps.map((s, i) => ({ ...s, n: i + 1 }));
+  const wfIds = [...new Set([ref.id, ...steps.map(s => (s.from || '').slice(0, 5)).filter(x => WFX[x])])];
+  return { label, steps, inject, expected: expected.length > 160 ? expected.slice(0, 159) + '…' : expected, synthetic, wfIds };
+}
+function stepTimers(t) {
+  if (!t) return '';
+  const a = []; (t.start || []).forEach(x => a.push(`${x} ▶`)); (t.stop || []).forEach(x => a.push(`${x} ■`));
+  return a.join(' ');
+}
+function stepText(s) {
+  const tm = stepTimers(s.timers);
+  return `${DIR_GLYPH[s.dir] || '·'} ${s.dir} ${s.layer} ${s.message}${tm ? ' · ' + tm : ''}`.replace(/\s+/g, ' ').trim();
+}
+/* fields marked verify:true inside the given workflows (paths for tooltips) */
+function verifyPaths(ids) {
+  const out = [];
+  const walk = (o, path) => {
+    if (Array.isArray(o)) o.forEach((x, i) => walk(x, `${path}[${i}]`));
+    else if (o && typeof o === 'object') { if (o.verify === true) out.push(path); Object.entries(o).forEach(([k, v]) => { if (k !== 'verify') walk(v, path ? `${path}.${k}` : k); }); }
+  };
+  ids.forEach(id => WFX[id] && walk(WFX[id], id));
+  // include the shared defaults the workflows point at (e.g. "defaults.rrc.RRCSetup")
+  const refs = new Set();
+  const findRefs = o => { if (Array.isArray(o)) o.forEach(findRefs); else if (o && typeof o === 'object') Object.entries(o).forEach(([k, v]) => { if (k === 'ref') [].concat(v).forEach(r => typeof r === 'string' && /^defaults\./.test(r) && refs.add(r)); else findRefs(v); }); };
+  ids.forEach(id => WFX[id] && findRefs(WFX[id]));
+  if (refs.size) refs.add('defaults.testEnvironment');
+  refs.forEach(r => { const obj = r.split('.').slice(1).reduce((o, k) => (o ? o[k] : undefined), DATA.workflows.defaults); if (obj) walk(obj, r); });
+  return [...new Set(out)];
+}
+function libraryVerifyCount() { return WF_OK ? JSON.stringify(DATA.workflows).split('"verify":true').length - 1 : 0; }
+
+// resolve every ladder branch once at boot
+DATA.ladder.forEach(g => g.moves.forEach(m => { m.flow = resolveFlow(m); }));
+
+// Every KPI any game can show. f(load) is the mock adapter's response model; idle is the value before play.
+const KPI_DEFS = [
+  { key: 'rach',      label: 'RACH success',          unit: '%',    sep: '',  dec: 1, min: 50, max: 100,  idle: 99,   f: L => 99 - 28 * L * L },
+  { key: 'prb',       label: 'PRB utilisation',       unit: '%',    sep: '',  dec: 1, min: 0,  max: 100,  idle: 20,   f: L => 20 + 78 * L },
+  { key: 'rejects',   label: 'Rejects',               unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 320,  idle: 0,    f: L => 220 * L ** 4 },
+  { key: 'latency',   label: 'Latency p95',           unit: 'ms',   sep: ' ', dec: 1, min: 0,  max: 40,   idle: 3,    f: L => 3 + 24 * L ** 3 },
+  { key: 'drops',     label: 'Drops',                 unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 60,   idle: 0,    f: L => 40 * L ** 5 },
+  { key: 'regSucc',   label: 'Registration success',  unit: '%',    sep: '',  dec: 1, min: 50, max: 100,  idle: 99.5, f: L => 99.5 - 27 * L * L },
+  { key: 'regLat',    label: 'Registration latency',  unit: 'ms',   sep: ' ', dec: 1, min: 0,  max: 400,  idle: 40,   f: L => 40 + 220 * L ** 3 },
+  { key: 'retries',   label: 'Retries',               unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 300,  idle: 0,    f: L => 200 * L ** 4 },
+  { key: 'regRej',    label: 'Rejects',               unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 320,  idle: 0,    f: L => 210 * L ** 4 },
+  { key: 'timeouts',  label: 'Timeouts',              unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 60,   idle: 0,    f: L => 40 * L ** 5 },
+  { key: 'sessSucc',  label: 'Session setup success', unit: '%',    sep: '',  dec: 1, min: 50, max: 100,  idle: 99.5, f: L => 99.5 - 27 * L * L },
+  { key: 'setupLat',  label: 'Setup latency',         unit: 'ms',   sep: ' ', dec: 1, min: 0,  max: 200,  idle: 12,   f: L => 12 + 110 * L ** 3 },
+  { key: 'fallbacks', label: 'Fallbacks',             unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 220,  idle: 0,    f: L => 150 * L ** 4 },
+  { key: 'sessRej',   label: 'Session rejects',       unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 320,  idle: 0,    f: L => 210 * L ** 4 },
+  { key: 'sessDrops', label: 'Session drops',         unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 60,   idle: 0,    f: L => 40 * L ** 5 },
+  { key: 'hoSucc',    label: 'HO success',            unit: '%',    sep: '',  dec: 1, min: 50, max: 100,  idle: 99.5, f: L => 99.5 - 27 * L * L },
+  { key: 'interrupt', label: 'Interruption',          unit: 'ms',   sep: ' ', dec: 1, min: 0,  max: 140,  idle: 18,   f: L => 18 + 70 * L ** 3 },
+  { key: 'pingpong',  label: 'Ping-pong rate',        unit: '%',    sep: '',  dec: 1, min: 0,  max: 40,   idle: 0,    f: L => 30 * L ** 4 },
+  { key: 'rlf',       label: 'RLF',                   unit: '/min', sep: ' ', dec: 0, min: 0,  max: 60,   idle: 0,    f: L => 40 * L ** 5 },
+  { key: 'cellTput',  label: 'Cell throughput',       unit: 'Mbps', sep: ' ', dec: 1, min: 0,  max: 1200, idle: 1150, f: L => 1150 - 700 * L * L },
+  { key: 'ueP5',      label: 'Per-UE p5',             unit: 'Mbps', sep: ' ', dec: 1, min: 0,  max: 50,   idle: 40,   f: L => 40 - 30 * L * L },
+  { key: 'fairness',  label: 'Fairness',              unit: 'Jain', sep: ' ', dec: 2, min: 0,  max: 1,    idle: 0.98, f: L => 0.98 - 0.4 * L * L },
+  { key: 'bler',      label: 'BLER',                  unit: '%',    sep: '',  dec: 1, min: 0,  max: 40,   idle: 2,    f: L => 2 + 25 * L ** 4 },
+  { key: 'callSucc',  label: 'Call setup success',    unit: '%',    sep: '',  dec: 1, min: 50, max: 100,  idle: 99.5, f: L => 99.5 - 27 * L * L },
+  { key: 'callSetup', label: 'Call setup time',       unit: 'ms',   sep: ' ', dec: 1, min: 0,  max: 4000, idle: 900,  f: L => 900 + 1500 * L ** 3 },
+  { key: 'qosFail',   label: 'QoS flow failures',     unit: '/min', sep: ' ', dec: 0, min: 0,  max: 60,   idle: 0,    f: L => 36 * L ** 4 },
+  { key: 'sipErr',    label: 'SIP errors',            unit: '/s',   sep: ' ', dec: 0, min: 0,  max: 320,  idle: 0,    f: L => 210 * L ** 4 },
+  { key: 'callDrops', label: 'Call drops',            unit: '/min', sep: ' ', dec: 0, min: 0,  max: 60,   idle: 0,    f: L => 40 * L ** 5 },
 ];
-const KPI = Object.fromEntries(KPIS.map(k => [k.key, k]));
+const KPI = Object.fromEntries(KPI_DEFS.map(k => [k.key, k]));
+const kpisOf = game => game.kpis.map(k => KPI[k]);
 const SLICES = [ { key: 'urllc', label: 'URLLC' }, { key: 'embb', label: 'eMBB' }, { key: 'mmtc', label: 'mMTC' } ];
 const TARGETS = { gnb: 'gNB / AI-RAN', modem: 'Modem' };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -794,7 +1312,19 @@ const trunc = (s, n, cls = '') => s.length > n
   ? `<span class="trunc ${cls}" title="${esc(s)}">${esc(s.slice(0, n - 1))}…</span>`
   : `<span class="${cls}">${esc(s)}</span>`;
 const maskImsi = d4 => '•••••••••••' + d4;
-const gameByKey = k => DATA.games.find(g => g.key === k);
+const gameByKey = k => DATA.games.find(g => g.key === k) || DATA.ladder.find(g => g.key === k);
+const levelByN = n => DATA.ladder.find(g => g.level === n);
+const agentLabel = game => `${CONFIG.agentName} · ${game.modelShort}`;
+const mmss = sec => `${pad2(Math.floor(sec / 60))}:${pad2(Math.floor(sec % 60))}`;
+function branchCount(game, diff) {
+  const L = CONFIG.ladder, N = game.moves.length;
+  return clamp(Math.round(N * L.branchFrac[diff]), Math.min(L.minBranches, N), N);
+}
+// ratio of a KPI value to its threshold, 0 = idle, 1 = at the limit
+function kpiRatio(key, v) {
+  const t = CONFIG.thresholds[key], k = KPI[key];
+  return t.dir === 'below' ? (k.max - v) / (k.max - t.limit) : v / t.limit;
+}
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isBreach = (k, v) => { const t = CONFIG.thresholds[k]; return t.dir === 'below' ? v < t.limit : v > t.limit; };
 const thrText = k => { const t = CONFIG.thresholds[k]; return `${t.dir === 'below' ? 'below' : 'above'} ${kpiText(k, t.limit)}`; };
@@ -804,7 +1334,14 @@ function newSeed() {
   try { crypto.getRandomValues(a); } catch (e) { a[0] = Math.floor(Math.random() * 4294967296); }
   return a[0].toString(16).padStart(8, '0');
 }
-function diffHint(key) { const d = CONFIG.difficulty[key]; return `${d.ues / 1000}K UEs · ${d.burst}× burst rate · escalates every ${d.everySec} s`; }
+function diffHint(key, mode = 'stress', gameKey = null) {
+  const d = CONFIG.difficulty[key];
+  if (mode !== 'ladder') return `${d.ues / 1000}K UEs · ${d.burst}× burst rate · escalates every ${d.everySec} s`;
+  const game = gameKey && gameByKey(gameKey);
+  const br = game ? `${branchCount(game, key)} of ${game.moves.length} branches`
+    : CONFIG.ladder.branchFrac[key] === 0 ? `Baseline + ${CONFIG.ladder.minBranches - 1} branches` : `${Math.round(CONFIG.ladder.branchFrac[key] * 100)}% of branches`;
+  return `${br} · ${d.ues / 1000}K UEs · min ${mmss(CONFIG.ladder.minClearSec[key])}`;
+}
 
 const ICONS = {
   menu: '<path d="M4 12h16M4 6h16M4 18h16"/>',
@@ -823,6 +1360,9 @@ const ICONS = {
   flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
   radio: '<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19"/><circle cx="12" cy="12" r="2"/>',
   back: '<path d="m15 18-6-6 6-6"/>',
+  lock: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  circleDashed: '<path d="M10.1 2.2a10 10 0 0 1 3.8 0M17.6 3.7a10 10 0 0 1 2.7 2.7M21.8 10.1a10 10 0 0 1 0 3.8M20.3 17.6a10 10 0 0 1-2.7 2.7M13.9 21.8a10 10 0 0 1-3.8 0M6.4 20.3a10 10 0 0 1-2.7-2.7M2.2 13.9a10 10 0 0 1 0-3.8M3.7 6.4a10 10 0 0 1 2.7-2.7"/>',
+  next: '<path d="M5 12h14M12 5l7 7-7 7"/>',
 };
 const icon = (n, extra = '') => `<svg class="i ${extra}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[n]}</svg>`;
 
@@ -830,14 +1370,17 @@ const icon = (n, extra = '') => `<svg class="i ${extra}" viewBox="0 0 24 24" ari
    STATE & STORAGE
    ================================================================== */
 const S = {
-  lobby: { target: 'gnb', dut: '', game: null, difficulty: 'normal', touched: false },
+  lobby: { mode: 'stress', target: 'gnb', dut: '', game: null, difficulty: 'normal', touched: false },
   testcase: null,
   game: null,
   sessionRuns: [],
-  counter: 42,
+  counter: 48,
   histFilter: { game: 'all', outcome: 'all', q: '' },
   histOpen: new Set(),
   lastRun: null,
+  unlocks: {},                 // { [exact DUT label]: highest level cleared }
+  unlockMode: 'progressive',   // 'progressive' | 'all'
+  unlockFx: null,              // { dut, n } plays the level-unlock moment once in the Lobby
 };
 const STORE_KEY = 'test-arena.v1';
 function store() { try { const ls = window.localStorage; return ls || null; } catch (e) { return null; } }
@@ -846,44 +1389,75 @@ function loadStore() {
   try {
     const raw = ls.getItem(STORE_KEY); if (!raw) return;
     const d = JSON.parse(raw);
-    if (Array.isArray(d.runs)) S.sessionRuns = d.runs;
-    if (Number.isInteger(d.counter)) S.counter = d.counter;
+    if (Array.isArray(d.runs)) S.sessionRuns = d.runs.filter(r => r && gameByKey(r.game));
+    if (Number.isInteger(d.counter)) S.counter = Math.max(S.counter, d.counter);
+    if (d.unlocks && typeof d.unlocks === 'object') S.unlocks = d.unlocks;
+    if (d.unlockMode === 'all' || d.unlockMode === 'progressive') S.unlockMode = d.unlockMode;
   } catch (e) { /* storage is a convenience only */ }
 }
 function saveStore() {
   const ls = store(); if (!ls) return;
-  try { ls.setItem(STORE_KEY, JSON.stringify({ counter: S.counter, runs: S.sessionRuns })); } catch (e) { /* quota or blocked */ }
+  try { ls.setItem(STORE_KEY, JSON.stringify({ counter: S.counter, runs: S.sessionRuns, unlocks: S.unlocks, unlockMode: S.unlockMode })); } catch (e) { /* quota or blocked */ }
+}
+
+/* ladder lock state for a DUT label: 'LOCKED' | 'OPEN' | 'CLEARED' */
+function levelState(dut, n) {
+  const cleared = S.unlocks[(dut || '').trim()] || 0;
+  if (n <= cleared) return 'CLEARED';
+  if (S.unlockMode === 'all' || n === 1 || n === cleared + 1) return 'OPEN';
+  return 'LOCKED';
 }
 
 /* ==================================================================
    SAMPLE RUN REPORTS (deterministic from seed)
    ================================================================== */
+function sampleBranches(s, g, rng) {
+  const list = g.moves.slice(0, branchCount(g, s.difficulty));
+  const share = s.durationSec / (list.length + 1);
+  const passedN = s.outcome === 'LEVEL CLEAR' ? list.length : Math.max(1, Math.floor(list.length * (0.35 + rng() * 0.3)));
+  return list.map((m, i) => {
+    const wf = m.flow ? m.flow.label : '—';
+    if (i < passedN) return { name: m.name, wf, result: 'Passed', t: Math.round(share * (i + 1)) };
+    if (i === passedN && s.outcome === 'DUT DOWN') {
+      const f = m.flow, n = f && f.steps.length ? Math.max(1, Math.ceil(f.steps.length * 0.6)) : 0;
+      return { name: m.name, wf, result: 'Failed', t: null, expected: f ? f.expected : m.tip, stepReached: n ? { n, of: f.steps.length, message: f.steps[n - 1].message, wf } : null };
+    }
+    return { name: m.name, wf, result: 'Not reached', t: null };
+  });
+}
 function completeSample(s) {
   const rng = mulberry32(parseInt(s.seed, 16));
   const g = gameByKey(s.game);
+  const ladder = g.kind === 'ladder';
   const kpi = {};
-  KPIS.forEach(k => {
+  kpisOf(g).forEach(k => {
     const t = CONFIG.thresholds[k.key];
     let v;
-    if (s.fail === k.key) v = t.dir === 'below' ? t.limit - 2 - rng() * 4 : t.limit * (1.05 + rng() * 0.1);
-    else v = t.dir === 'below' ? t.limit + 6 + rng() * 14 : t.limit * (0.45 + rng() * 0.4);
+    if (s.fail === k.key) v = t.dir === 'below' ? t.limit * (0.9 - rng() * 0.05) : t.limit * (1.05 + rng() * 0.1);
+    else v = t.dir === 'below' ? t.limit + (k.max - t.limit) * (0.35 + rng() * 0.4) : t.limit * (0.45 + rng() * 0.4);
     kpi[k.key] = { value: +v.toFixed(k.dec), limit: t.limit, dir: t.dir, breached: isBreach(k.key, v) };
   });
+  const branches = ladder ? sampleBranches(s, g, rng) : null;
+  const pool = ladder ? g.moves.slice(0, branchCount(g, s.difficulty)) : g.moves;
   const moves = [];
-  for (let i = 4; i >= 0; i--) moves.push({ t: Math.max(0, s.durationSec - i * 2 - 2), move: g.moves[Math.floor(rng() * g.moves.length)].name });
+  for (let i = 4; i >= 0; i--) moves.push({ t: Math.max(0, s.durationSec - i * 2 - 2), move: pool[Math.floor(rng() * pool.length)].name });
   const pts = 40, timeline = [];
   for (let i = 0; i <= pts; i++) { const f = i / pts; timeline.push([Math.round(f * s.durationSec), Math.round(s.score * Math.pow(f, 1.35 + rng() * 0.05))]); }
   timeline[pts][1] = s.score;
   const thr = CONFIG.thresholds[s.fail] || {};
+  const failed = branches && branches.find(b => b.result === 'Failed' && b.stepReached);
   const reason = s.reason || (s.outcome === 'DUT DOWN'
-    ? `${KPI[s.fail].label} ${thr.dir === 'below' ? 'fell below' : 'exceeded'} ${kpiText(s.fail, thr.limit)} for ${CONFIG.failHoldTicks / 10} s under ${moves[4].move}`
-    : 'Stopped by user');
+    ? (failed ? `${failed.wf.split(' · ')[0]} step ${failed.stepReached.n} (${failed.stepReached.message.slice(0, 28)}): ${KPI[s.fail].label} ${thr.dir === 'below' ? 'fell below' : 'exceeded'} ${kpiText(s.fail, thr.limit)}`
+      : `${KPI[s.fail].label} ${thr.dir === 'below' ? 'fell below' : 'exceeded'} ${kpiText(s.fail, thr.limit)} for ${CONFIG.failHoldTicks / 10} s under ${moves[4].move}`)
+    : s.outcome === 'LEVEL CLEAR' ? `All ${branches.length} branches passed` : 'Stopped by user');
   const d = new Date(s.startedAt);
   return {
-    runId: 's' + pad3(s.n), label: `PLAY ${pad3(s.n)}`, sample: true, game: s.game, difficulty: s.difficulty, target: s.target, dut: s.dut,
+    runId: 's' + pad3(s.n), label: `PLAY ${pad3(s.n)}`, sample: true, kind: g.kind, level: g.level || null,
+    game: s.game, difficulty: s.difficulty, target: s.target, dut: s.dut,
     seed: s.seed, testcaseId: `TC-${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}-${String(parseInt(s.seed.slice(0, 4), 16) % 10000).padStart(4, '0')}`,
     startedAt: s.startedAt, durationSec: s.durationSec, outcome: s.outcome, score: s.score, reason, triggering: moves, moves,
-    kpi, timeline, events: [], agentVersion: CONFIG.agentVersion,
+    kpi, timeline, events: [], agentVersion: agentLabel(g), branches, unlockNotice: null, stepReached: failed ? failed.stepReached : null,
+    workflowLibrary: ladder ? `${DATA.workflows.schema} ${DATA.workflows.schemaVersion}` : undefined,
   };
 }
 const SAMPLE_RUNS = DATA.sampleRuns.map(completeSample);
@@ -897,6 +1471,7 @@ function generateTestcase(seed) {
   const L = S.lobby;
   const rng = mulberry32((parseInt(seed, 16) ^ 0x5bd1e995) >>> 0);
   const g = gameByKey(L.game), d = CONFIG.difficulty[L.difficulty];
+  const ladder = g.kind === 'ladder';
   const jitter = () => 0.85 + rng() * 0.3;
   const w = g.mix.map(m => m * jitter()); const ws = w.reduce((a, b) => a + b, 0);
   const counts = w.map(x => Math.round(d.ues * x / ws));
@@ -906,13 +1481,19 @@ function generateTestcase(seed) {
   const n = Math.min(5, 1 + Math.floor(rng() * Math.min(5, pool.length + 2)));
   const picked = [...pool, ...others].slice(0, n);
   const now = new Date();
+  const nb = ladder ? branchCount(g, L.difficulty) : 0;
+  const clearSec = ladder ? CONFIG.ladder.minClearSec[L.difficulty] : 0;
+  const what = ladder ? `${nb} branches` : `${g.moves.length} moves`;
+  const title = ladder ? `Level ${g.level} · ${g.name}` : g.name;
   return {
-    seed, game: g.key, difficulty: L.difficulty, target: L.target, dut: L.dut.trim(),
+    seed, game: g.key, kind: g.kind, level: g.level || null, difficulty: L.difficulty, target: L.target, dut: L.dut.trim(),
     id: `TC-${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${String(parseInt(seed.slice(0, 4), 16) % 10000).padStart(4, '0')}`,
     cohort: { urllc: counts[0], embb: counts[1], mmtc: counts[2], total: d.ues },
     captures: picked,
     genTime: +(0.40 + rng() * 1.35).toFixed(2),
-    summary: `${g.name} against ${TARGETS[L.target]}: ${int(d.ues)} UEs, ${g.moves.length} moves, seeded from ${n} field capture${n > 1 ? 's' : ''}.`,
+    branchCount: nb, clearSec,
+    clearRule: ladder ? `Pass all ${nb} branches with no DUT failure, min ${mmss(clearSec)}` : '',
+    summary: `${title} against ${TARGETS[L.target]}: ${int(d.ues)} UEs, ${what}, seeded from ${n} field capture${n > 1 ? 's' : ''}.`,
   };
 }
 function testcaseFromRun(run) {
@@ -931,30 +1512,40 @@ function createGame(tc) {
   saveStore();
   const d = CONFIG.difficulty[tc.difficulty];
   const game = gameByKey(tc.game);
-  const kpis = { rach: 99, prb: 20, rejects: 0, latency: 3, drops: 0 };
+  const ladder = game.kind === 'ladder';
+  const list = ladder ? game.moves.slice(0, tc.branchCount || branchCount(game, tc.difficulty)) : game.moves;
+  const kpiList = kpisOf(game);
+  const zero = () => Object.fromEntries(kpiList.map(k => [k.key, 0]));
   const g = {
-    n, label: `PLAY ${pad3(n)}`, runId: 'r' + pad3(n) + '-' + tc.seed.slice(0, 4), tc, game, d,
+    n, label: `PLAY ${pad3(n)}`, runId: 'r' + pad3(n) + '-' + tc.seed.slice(0, 4), tc, game, d, ladder, list, kpiList,
     rng: mulberry32(parseInt(tc.seed, 16) >>> 0),
     tick: 0, started: false, ended: false, outcome: null,
     level: d.base, levelIdx: 1, escTicks: Math.round(d.everySec * 1000 / CONFIG.tickMs),
-    q: game.moves.map(() => 0), moveIdx: 0, windowRewards: [], decisions: 0,
-    kpis, loads: {}, breachTicks: { rach: 0, prb: 0, rejects: 0, latency: 0, drops: 0 }, breached: {},
+    q: list.map(() => 0), moveIdx: 0, windowRewards: [], decisions: 0,
+    kpis: Object.fromEntries(kpiList.map(k => [k.key, k.idle])), loads: {}, breachTicks: zero(), breached: {},
     status: 'Serving', state: 'RUNNING', escUntil: 0,
-    reward: 0, parts: { reject: 0, latency: 0, drop: 0 }, score: 0, rachAttempts: 0,
+    reward: 0, parts: [0, 0, 0], score: 0, attempts: 0, hoRate: 0,
     active: { urllc: 0, embb: 0, mmtc: 0 },
-    hist: { rach: [], prb: [], rejects: [], latency: [], drops: [] },
+    hist: Object.fromEntries(kpiList.map(k => [k.key, []])),
     timeline: [[0, 0]], moves: [], events: [], evSeq: 0,
+    passed: list.map(() => null), covered: 0, holdTicks: 0, serving: 0, clearTicks: (tc.clearSec || 0) * 10,
+    stepIdx: 0, stepReached: null,
     startedAt: new Date().toISOString(), failKpi: null, reason: '',
-    v: { state: 0, reward: 0, hist: 0, ev: 0, status: 0, move: 0 },
+    v: { state: 0, reward: 0, hist: 0, ev: 0, status: 0, move: 0, cov: 0, ho: 0, step: 0 },
   };
   return g;
 }
+const curMove = g => g.list[g.moveIdx];
+const curFlow = g => (g.ladder && curMove(g).flow) || null;
+// narrate one workflow step every stepTicks so a branch's whole flow plays within (or just past) passTicks
+const stepTicksOf = flow => (flow && flow.steps.length ? Math.max(2, Math.ceil(CONFIG.ladder.passTicks / flow.steps.length)) : 0);
 function logEvent(g, msg) {
   g.events.unshift({ seq: ++g.evSeq, at: Date.now(), t: g.tick / 10, msg: msg.slice(0, 80) });
-  if (g.events.length > 60) g.events.length = 60;
+  if (g.events.length > 200) g.events.length = 200;
   g.v.ev++;
 }
 function setState(g, state) { if (g.state !== state) { g.state = state; g.v.state++; onStateChange(g); } }
+function argmax(g, idxs) { let best = idxs[0]; for (const i of idxs) if (g.q[i] > g.q[best]) best = i; return best; }
 function agentDecide(g) {
   const A = CONFIG.agent;
   if (g.decisions > 0 && g.windowRewards.length) {
@@ -962,15 +1553,24 @@ function agentDecide(g) {
     g.q[g.moveIdx] += A.alpha * (avg - g.q[g.moveIdx]);
   }
   g.windowRewards = [];
+  // ladder: stay on a branch until it has passed
+  if (g.ladder && g.decisions > 0 && g.passed[g.moveIdx] === null) { g.decisions++; return; }
   const explore = g.rng() < A.epsilon;
+  const all = g.q.map((_, i) => i);
+  const open = g.ladder ? all.filter(i => g.passed[i] === null) : [];
+  const pool = open.length ? open : all;
   let idx;
-  if (explore) idx = Math.floor(g.rng() * g.q.length);
-  else { idx = 0; for (let i = 1; i < g.q.length; i++) if (g.q[i] > g.q[idx]) idx = i; }
+  if (g.ladder && g.decisions === 0) idx = 0; // baseline first
+  else if (explore) idx = pool[Math.floor(g.rng() * pool.length)];
+  else idx = argmax(g, pool);
   const changed = idx !== g.moveIdx || g.decisions === 0;
   g.moveIdx = idx; g.decisions++;
-  const name = g.game.moves[idx].name;
+  const name = g.list[idx].name;
   g.moves.push({ t: g.tick / 10, move: name });
-  if (changed) { g.v.move++; logEvent(g, `Agent chose ${name} · Q ${signed(g.q[idx])}${explore ? ' · explore' : ''}`); }
+  if (changed) {
+    g.holdTicks = 0; g.stepIdx = 0; g.v.move++; g.v.step++;
+    logEvent(g, `Agent chose ${name} · Q ${signed(g.q[idx])}${explore ? ' · explore' : ''}`);
+  }
 }
 function tick(g) {
   if (g.ended || !g.started) return;
@@ -984,29 +1584,24 @@ function tick(g) {
     pendingFx.escalate = true;
   }
   if (g.state === 'ESCALATING' && tk >= g.escUntil) setState(g, 'RUNNING');
-  const mv = g.game.moves[g.moveIdx];
-  const L = g.loads;
-  for (const k of KPIS) {
+  const mv = curMove(g);
+  const L = g.loads, K = g.kpis;
+  for (const k of g.kpiList) {
     const p = g.game.tags.includes(k.key) ? 1 : M.offTagPressure;
     const boost = mv.target === k.key ? M.targetBoost : 1;
     L[k.key] = Math.max(0, g.level * mv.strength * boost * p + (g.rng() - 0.5) * M.noise);
+    K[k.key] = clamp(k.f(L[k.key]), k.min, k.max * 1.5);
   }
-  const K = g.kpis;
-  K.rach = clamp(99 - 28 * L.rach * L.rach, 0, 100);
-  K.prb = clamp(20 + 78 * L.prb, 0, 100);
-  K.rejects = 220 * Math.pow(L.rejects, 4);
-  K.latency = 3 + 24 * Math.pow(L.latency, 3);
-  K.drops = 40 * Math.pow(L.drops, 5);
-  g.rachAttempts = Math.round(g.tc.cohort.total * d.burst * L.rach * 0.004);
+  g.attempts = Math.round(g.tc.cohort.total * d.burst * L[g.kpiList[0].key] * 0.004);
   const act = 0.55 + 0.4 * Math.min(1, g.level);
   SLICES.forEach(s => { g.active[s.key] = Math.round(g.tc.cohort[s.key] * act); });
+  g.hoRate = Math.round((g.active.urllc + g.active.embb + g.active.mmtc) * 0.003 * (0.6 + g.level));
 
   // breaches and failure
   let stress = 0;
-  for (const k of KPIS) {
-    const key = k.key, t = CONFIG.thresholds[key], v = K[key];
-    const ratio = t.dir === 'below' ? (100 - v) / (100 - t.limit) : v / t.limit;
-    stress = Math.max(stress, ratio);
+  for (const k of g.kpiList) {
+    const key = k.key, v = K[key];
+    stress = Math.max(stress, kpiRatio(key, v));
     if (isBreach(key, v)) {
       g.breachTicks[key]++;
       if (!g.breached[key]) { g.breached[key] = true; g.v.status++; pendingFx.breach.add(key); logEvent(g, `${k.label} breached ${thrText(key)}`); }
@@ -1022,36 +1617,69 @@ function tick(g) {
     logEvent(g, status === 'Barring' ? 'DUT barring access classes 2–9' : status === 'Rejecting' ? 'DUT rejecting RRC setup requests' : 'DUT serving normally');
   }
 
+  // ladder: handovers (L3), branch coverage and level clear
+  if (g.ladder) {
+    if (g.game.level === 3 && tk % CONFIG.ladder.hoEveryTicks === 0) {
+      // Cells 1–2 share TAC 000001; WF-05c and WF-06b move the cohort into Cell 3 (TAC 000002)
+      const ref = mv.wf || {}, toNewTA = ref.variant === 'WF-05c' || ref.variant === 'WF-06b';
+      const from = g.serving, to = toNewTA ? (from === 2 ? 0 : 2) : (from === 0 ? 1 : 0);
+      g.serving = to; g.v.ho++;
+      logEvent(g, `${/^WF-06/.test(ref.id || '') ? 'Reselection' : 'Handover'} Cell ${from + 1} → Cell ${to + 1}`);
+    }
+    g.holdTicks++;
+    const flow = curFlow(g), st = stepTicksOf(flow);
+    if (flow && g.stepIdx < flow.steps.length && (g.holdTicks - 1) % st === 0) {
+      const step = flow.steps[g.stepIdx++]; g.v.step++;
+      logEvent(g, stepText(step));
+    }
+    const narrated = !flow || !flow.steps.length || g.stepIdx >= flow.steps.length;
+    if (g.passed[g.moveIdx] === null && g.holdTicks >= CONFIG.ladder.passTicks && narrated) {
+      g.passed[g.moveIdx] = tk / 10; g.covered++; g.v.cov++; pendingFx.branch = true;
+      logEvent(g, `Branch passed: ${mv.name}`);
+      announce(`Branch passed: ${mv.name}. ${g.covered} of ${g.list.length}.`);
+    }
+    if (g.covered === g.list.length && tk >= g.clearTicks) return clearLevel(g);
+  }
+
   // reward, score and samples every second
   if (tk % CONFIG.rewardTicks === 0) {
-    const R = CONFIG.reward, T = CONFIG.thresholds;
-    const ratio = { reject: K.rejects / T.rejects.limit, latency: K.latency / T.latency.limit, drop: K.drops / T.drops.limit };
+    const R = CONFIG.reward, W = R.weights[g.game.key];
+    const ratios = g.game.reward.map(c => kpiRatio(c.kpi, K[c.kpi]));
     let r = 0, s = 0;
-    for (const key of ['reject', 'latency', 'drop']) {
-      g.parts[key] = R.weights[key] * (ratio[key] - R.baseline) * R.gain; r += g.parts[key];
-      s += R.weights[key] * ratio[key];
-    }
+    ratios.forEach((ratio, i) => { g.parts[i] = W[i] * (ratio - R.baseline) * R.gain; r += g.parts[i]; s += W[i] * ratio; });
     g.reward = r; g.windowRewards.push(r);
     g.score += Math.round(R.scoreScale * s);
     g.v.reward++;
-    for (const k of KPIS) { const h = g.hist[k.key]; h.push(K[k.key]); if (h.length > 60) h.shift(); }
+    for (const k of g.kpiList) { const h = g.hist[k.key]; h.push(K[k.key]); if (h.length > 60) h.shift(); }
     g.v.hist++;
-    if (ratio.reject > 0.3 && g.rng() < 0.25) logEvent(g, `RRC reject · IMSI ${maskImsi(String(Math.floor(g.rng() * 10000)).padStart(4, '0'))}`);
+    if (ratios[0] > 0.3 && g.rng() < 0.25) logEvent(g, `${g.ladder ? 'NAS reject' : 'RRC reject'} · IMSI ${maskImsi(String(Math.floor(g.rng() * 10000)).padStart(4, '0'))}`);
     if (tk % 50 === 0) { g.timeline.push([tk / 10, g.score]); if (g.timeline.length > 720) g.timeline = g.timeline.filter((_, i) => i % 2 === 0); }
   }
 }
-function finishRun(g, outcome, reason) {
+function branchResults(g, outcome) {
+  if (!g.ladder) return null;
+  // the branch in play when the DUT went down is Failed, even if it had passed on an earlier visit
+  return g.list.map((m, i) => {
+    const wf = m.flow ? m.flow.label : '—';
+    if (outcome === 'DUT DOWN' && i === g.moveIdx) return { name: m.name, wf, result: 'Failed', t: g.passed[i], stepReached: g.stepReached, expected: m.flow ? m.flow.expected : m.tip };
+    return g.passed[i] !== null ? { name: m.name, wf, result: 'Passed', t: g.passed[i] } : { name: m.name, wf, result: 'Not reached', t: null };
+  });
+}
+function finishRun(g, outcome, reason, extra = {}) {
   g.ended = true; g.outcome = outcome; g.reason = reason;
   g.timeline.push([g.tick / 10, g.score]);
   const now = Date.now();
   const kpi = {};
-  KPIS.forEach(k => { const t = CONFIG.thresholds[k.key]; kpi[k.key] = { value: +g.kpis[k.key].toFixed(k.dec), limit: t.limit, dir: t.dir, breached: isBreach(k.key, g.kpis[k.key]) }; });
+  g.kpiList.forEach(k => { const t = CONFIG.thresholds[k.key]; kpi[k.key] = { value: +g.kpis[k.key].toFixed(k.dec), limit: t.limit, dir: t.dir, breached: isBreach(k.key, g.kpis[k.key]) }; });
   const run = {
-    runId: g.runId, label: g.label, sample: false, game: g.game.key, difficulty: g.tc.difficulty, target: g.tc.target, dut: g.tc.dut,
+    runId: g.runId, label: g.label, sample: false, kind: g.game.kind, level: g.game.level || null,
+    game: g.game.key, difficulty: g.tc.difficulty, target: g.tc.target, dut: g.tc.dut,
     seed: g.tc.seed, testcaseId: g.tc.id, startedAt: g.startedAt, durationSec: g.tick / 10, durationTicks: g.tick,
     outcome, score: g.score, reason, triggering: g.moves.slice(-5), moves: g.moves.slice(), kpi, timeline: g.timeline.slice(),
     events: g.events.filter(e => now - e.at <= CONFIG.logWindowSec * 1000 || e.t >= g.tick / 10 - CONFIG.logWindowSec).map(e => ({ t: e.t, msg: e.msg })),
-    agentVersion: CONFIG.agentVersion, cohort: g.tc.cohort, captures: g.tc.captures.map(c => c.id),
+    agentVersion: agentLabel(g.game), cohort: g.tc.cohort, captures: g.tc.captures.map(c => c.id),
+    branches: branchResults(g, outcome), unlockNotice: null, stepReached: g.stepReached,
+    workflowLibrary: g.ladder ? `${DATA.workflows.schema} ${DATA.workflows.schemaVersion}` : undefined, ...extra,
   };
   S.sessionRuns.unshift(run);
   S.lastRun = run;
@@ -1060,13 +1688,35 @@ function finishRun(g, outcome, reason) {
 }
 function failGame(g, key) {
   const k = KPI[key], t = CONFIG.thresholds[key];
-  const mv = g.game.moves[g.moveIdx].name;
-  const reason = `${k.label} ${t.dir === 'below' ? 'fell below' : 'exceeded'} ${kpiText(key, t.limit)} for ${CONFIG.failHoldTicks / 10} s under ${mv}`;
+  const mv = curMove(g).name, flow = curFlow(g);
+  let reason = `${k.label} ${t.dir === 'below' ? 'fell below' : 'exceeded'} ${kpiText(key, t.limit)} for ${CONFIG.failHoldTicks / 10} s under ${mv}`;
+  if (flow && flow.steps.length) {
+    const n = clamp(g.stepIdx, 1, flow.steps.length), s = flow.steps[n - 1];
+    g.stepReached = { n, of: flow.steps.length, message: s.message, wf: flow.label };
+    reason = `${flow.label.split(' · ')[0]} step ${n} (${s.message.slice(0, 28)}): ${k.label} ${t.dir === 'below' ? 'fell below' : 'exceeded'} ${kpiText(key, t.limit)}`;
+  }
   g.status = 'Down'; g.failKpi = key; g.v.status++;
   logEvent(g, `DUT down · ${reason}`.slice(0, 80));
   setState(g, 'DUT DOWN');
   const run = finishRun(g, 'DUT DOWN', reason);
   runFailureSequence(g, run);
+}
+function clearLevel(g) {
+  const n = g.game.level, dut = g.tc.dut, N = g.list.length;
+  let notice = null;
+  if (S.unlockMode === 'progressive') {
+    if ((S.unlocks[dut] || 0) < n) S.unlocks[dut] = n;
+    const next = levelByN(n + 1);
+    if (next) {
+      notice = `Level ${next.level} · ${next.name} unlocked for ${dut}`;
+      if (notice.length > 60) notice = notice.slice(0, 59) + '…';
+      S.unlockFx = { dut, n: next.level };
+    }
+  }
+  logEvent(g, `Level ${n} cleared · all ${N} branches passed`);
+  setState(g, 'CLEARED');
+  const run = finishRun(g, 'LEVEL CLEAR', `All ${N} branches passed`, { unlockNotice: notice });
+  runClearSequence(g, run);
 }
 function stopGame(g) {
   if (!g || g.ended) return null;
@@ -1079,7 +1729,7 @@ function stopGame(g) {
 const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 const SPEED = DEBUG ? clamp(parseInt(new URLSearchParams(location.search).get('speed') || '1', 10) || 1, 1, 200) : 1;
 let accMs = 0, lastMs = performance.now();
-const pendingFx = { escalate: false, breach: new Set() };
+const pendingFx = { escalate: false, breach: new Set(), branch: false };
 setInterval(() => {
   const now = performance.now();
   const g = S.game;
@@ -1146,7 +1796,7 @@ const Tip = {
 };
 function kpiTip(key) {
   const g = S.game, t = CONFIG.thresholds[key];
-  if (!g) return `${KPI[key].label} · limit ${kpiText(key, t.limit)}`;
+  if (!g || !g.hist[key]) return `${KPI[key].label} · limit ${kpiText(key, t.limit)}`;
   const h = g.hist[key].length ? g.hist[key] : [g.kpis[key]];
   return `Now ${kpiText(key, g.kpis[key])} · limit ${kpiText(key, t.limit)} · 60 s ${Math.min(...h).toFixed(KPI[key].dec)}–${Math.max(...h).toFixed(KPI[key].dec)}`;
 }
@@ -1199,10 +1849,13 @@ const copyBtn = (value, label) => `<button class="copy" data-action="copy" data-
 function downloadRun(run) {
   const payload = {
     runId: run.runId, game: run.label, testcaseId: run.testcaseId, startedAt: run.startedAt,
-    config: { game: gameByKey(run.game).name, difficulty: CONFIG.difficulty[run.difficulty].label, target: TARGETS[run.target], dut: run.dut,
-      thresholds: CONFIG.thresholds, failureKpis: CONFIG.failureKpis[run.game], failHoldSec: CONFIG.failHoldTicks / 10, reward: CONFIG.reward, difficultyParams: CONFIG.difficulty[run.difficulty] },
+    config: { game: gameName(run), mode: run.kind === 'ladder' ? 'Procedure Ladder' : 'Stress game', gameModel: gameByKey(run.game).model,
+      difficulty: CONFIG.difficulty[run.difficulty].label, target: TARGETS[run.target], dut: run.dut,
+      thresholds: Object.fromEntries(gameByKey(run.game).kpis.map(k => [k, CONFIG.thresholds[k]])), failureKpis: CONFIG.failureKpis[run.game], failHoldSec: CONFIG.failHoldTicks / 10,
+      reward: { components: gameByKey(run.game).reward.map(c => c.label), weights: CONFIG.reward.weights[run.game], baseline: CONFIG.reward.baseline, gain: CONFIG.reward.gain, scoreScale: CONFIG.reward.scoreScale },
+      difficultyParams: CONFIG.difficulty[run.difficulty], ladder: run.kind === 'ladder' ? { minClearSec: CONFIG.ladder.minClearSec[run.difficulty], passSec: CONFIG.ladder.passTicks / 10 } : undefined },
     seed: run.seed, agentVersion: run.agentVersion, outcome: run.outcome, reason: run.reason, durationSec: run.durationSec, score: run.score,
-    triggeringMoves: run.triggering, moves: run.moves, kpiSnapshot: run.kpi, scoreTimeline: run.timeline,
+    triggeringMoves: run.triggering, moves: run.moves, kpiSnapshot: run.kpi, branchResults: run.branches || undefined, unlockNotice: run.unlockNotice || undefined, stepReached: run.stepReached || undefined, workflowLibrary: run.workflowLibrary || undefined, scoreTimeline: run.timeline,
     logWindowSec: CONFIG.logWindowSec, events: run.events, adapter: 'SIMULATED',
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1225,72 +1878,183 @@ function seg(name, options, value, label) {
   </div>`;
 }
 const outcomeBadge = o => {
-  const m = { 'DUT DOWN': ['b-shu', 'alert'], 'STOPPED': ['b-muted', 'stop'], 'PLATFORM ERROR': ['b-warn', 'flag'] }[o] || ['b-muted', 'stop'];
+  const m = { 'DUT DOWN': ['b-shu', 'alert'], 'STOPPED': ['b-muted', 'stop'], 'LEVEL CLEAR': ['b-hisui', 'check'], 'PLATFORM ERROR': ['b-warn', 'flag'] }[o] || ['b-muted', 'stop'];
   return `<span class="badge ${m[0]}">${icon(m[1])}${esc(o)}</span>`;
 };
 const shapeSvg = k => `<span class="shape ${k}" aria-hidden="true"></span>`;
+// "Signalling Storm" or "L1 Registration" (tables, badges); headerName gives "Level 1 · Registration"
+const gameName = r => { const g = gameByKey(r.game); return g.kind === 'ladder' ? g.short : g.name; };
+const headerName = g => g.kind === 'ladder' ? `Level ${g.level} · ${g.name}` : g.name;
+const LOCK_BADGE = { LOCKED: ['b-muted', 'lock'], OPEN: ['b-primary', 'play'], CLEARED: ['b-hisui', 'check'] };
 
 /* ==================================================================
    SCREENS
    ================================================================== */
+function gameCard(g, i, L) {
+  return `<button type="button" class="card chamfer" style="--i:${i}" data-action="game" data-value="${g.key}" aria-pressed="${L.game === g.key}">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="t-h3">${esc(g.name)}</span>
+    <span class="desc">${esc(g.desc)}</span>
+    <span class="tags">${g.tags.map(t => `<span class="tag">${esc(KPI[t].label)}</span>`).join('')}</span>
+    <span class="sel" aria-hidden="true">${icon('check')}Selected</span>
+  </button>`;
+}
+function levelCard(g, i, L) {
+  const st = levelState(L.dut, g.level), locked = st === 'LOCKED';
+  const next = levelState(L.dut, g.level + 1);
+  const conn = g.level < DATA.ladder.length ? `<span class="conn ${st === 'CLEARED' ? 'done' : next === 'LOCKED' ? 'dashed' : ''}" aria-hidden="true"></span>` : '';
+  const fx = S.unlockFx && S.unlockFx.dut === L.dut.trim() && S.unlockFx.n === g.level ? ' unlocking' : '';
+  const prevConnFx = S.unlockFx && S.unlockFx.dut === L.dut.trim() && S.unlockFx.n === g.level + 1 ? ' draw' : '';
+  const b = LOCK_BADGE[st];
+  const hint = `Clear L${g.level - 1} to unlock`;
+  return `<button type="button" class="card level chamfer${fx}" style="--i:${i}" data-action="game" data-value="${g.key}" data-level="${g.level}"
+      aria-pressed="${!locked && L.game === g.key}" ${locked ? `aria-disabled="true" data-tip="${hint}"` : ''}
+      aria-label="Level ${g.level} ${esc(g.name)}, ${esc(g.modelCard)}, ${st.toLowerCase()}${locked ? '. ' + hint : ''}">
+    <span class="mark" aria-hidden="true"></span>
+    ${conn.replace('class="conn', `class="conn${prevConnFx}`)}
+    <span class="lvl-head"><span class="lvl-num chamfer" aria-hidden="true">${g.level}</span>
+      <span class="badge ${b[0]} lock-badge">${icon(b[1])}${st}</span></span>
+    <span class="t-h3">${esc(g.name)}</span>
+    <span class="model t-caption">${esc(g.modelCard)}</span>
+    <span class="wf-tags">${g.workflows.map(id => `<span class="wftag">${id}</span>`).join('')}</span>
+    <span class="desc">${esc(g.desc)}</span>
+    <span class="tags">${g.tags.map(t => `<span class="tag">${esc(KPI[t].label)}</span>`).join('')}</span>
+    ${locked ? `<span class="lock-row t-caption">${icon('lock')}${hint}</span>` : `<span class="sel" aria-hidden="true">${icon('check')}Selected</span>`}
+  </button>`;
+}
+function cardsHtml() {
+  const L = S.lobby;
+  if (L.mode === 'ladder' && !WF_OK) return `<p class="panel wf-error" role="alert">${icon('alert')}<span>Workflow library version not supported. Ladder levels need <span class="t-data">test-arena.signalling-workflows</span> 1.x; stress games still work.</span></p>`;
+  return L.mode === 'ladder'
+    ? `<div class="cards ladder stagger" role="group" aria-labelledby="lbl-game">${DATA.ladder.map((g, i) => levelCard(g, i, L)).join('')}</div>`
+    : `<div class="cards stagger" role="group" aria-labelledby="lbl-game">${DATA.games.map((g, i) => gameCard(g, i, L)).join('')}</div>`;
+}
+function cardsLabel() {
+  return S.lobby.mode === 'ladder'
+    ? `<span class="t-label" id="lbl-game">Ladder level</span><span class="jp-sub" aria-hidden="true">段位</span>`
+    : `<span class="t-label" id="lbl-game">Stress game</span>`;
+}
 function viewLobby() {
   const L = S.lobby;
   const err = L.touched && !L.dut.trim();
-  return `<section class="screen lobby has-pattern" aria-labelledby="screen-h1">
-    ${titleBlock('SELECT GAME', 'ロビー', 'Pick a target, name the device under test and choose how hard the cohort should push. The game runs until you stop it or the DUT breaks.', true)}
+  const html = `<section class="screen lobby has-pattern" aria-labelledby="screen-h1">
+    ${titleBlock('SELECT GAME', 'ロビー', 'Pick a mode and a target, name the device under test and choose how hard the cohort should push. Stress games run until you stop them or the DUT breaks; ladder levels clear in order.', true)}
     <div class="lobby-grid">
+      <div class="field span-4"><span class="t-label" id="lbl-mode">Mode</span>
+        ${seg('lmode', [{ value: 'stress', label: 'Stress games' }, { value: 'ladder', label: 'Procedure Ladder' }], L.mode, 'Mode')}</div>
       <div class="field span-4"><span class="t-label" id="lbl-target">Target</span>
         ${seg('target', [{ value: 'gnb', label: 'gNB / AI-RAN' }, { value: 'modem', label: 'Modem' }], L.target, 'Target')}</div>
-      <div class="field span-8"><label class="t-label" for="dut">DUT label</label>
+      <div class="field span-4"><label class="t-label" for="dut">DUT label</label>
         <input class="input" id="dut" maxlength="40" autocomplete="off" spellcheck="false" placeholder="e.g. gNB-X sw 4.2.1" value="${esc(L.dut)}" aria-describedby="dut-hint dut-err" aria-required="true" aria-invalid="${err}">
-        <span class="t-caption" id="dut-hint">Device name and build, 1–40 characters</span>
+        <span class="t-caption" id="dut-hint">Device name and build, 1–40 characters. Ladder unlocks are kept per label.</span>
         <span class="error" id="dut-err" ${err ? '' : 'hidden'}>${icon('alert')}Enter a DUT label to continue.</span></div>
-      <div class="field span-12"><span class="t-label" id="lbl-game">Stress game</span>
-        <div class="cards stagger" role="group" aria-labelledby="lbl-game">
-          ${DATA.games.map((g, i) => `<button type="button" class="card chamfer" style="--i:${i}" data-action="game" data-value="${g.key}" aria-pressed="${L.game === g.key}">
-            <span class="mark" aria-hidden="true"></span>
-            <span class="t-h3">${esc(g.name)}</span>
-            <span class="desc">${esc(g.desc)}</span>
-            <span class="tags">${g.tags.map(t => `<span class="tag">${esc(KPI[t].label)}</span>`).join('')}</span>
-            <span class="sel" aria-hidden="true">${icon('check')}Selected</span>
-          </button>`).join('')}
-        </div></div>
+      <div class="field span-12" id="cards-field"><div class="cards-label">${cardsLabel()}</div>${cardsHtml()}</div>
       <div class="field span-12"><span class="t-label" id="lbl-diff">Difficulty</span>
         ${seg('difficulty', DATA.difficulty.map(k => ({ value: k, label: CONFIG.difficulty[k].label })), L.difficulty, 'Difficulty')}
-        <span class="diff-hint t-caption" id="diff-hint">${esc(diffHint(L.difficulty))}</span></div>
+        <span class="diff-hint t-caption" id="diff-hint">${esc(diffHint(L.difficulty, L.mode, L.game))}</span></div>
     </div>
     <div class="lobby-actions">
       <button type="button" class="btn btn-hero btn-primary chamfer" id="generate" data-action="generate" aria-describedby="gen-why">GENERATE</button>
       <span class="t-caption" id="gen-why">${esc(generateWhy())}</span>
     </div>
   </section>`;
+  return html;
 }
-function lobbyValid() { const L = S.lobby; return !!(L.target && L.game && L.dut.trim().length >= 1 && L.dut.trim().length <= 40); }
+/* re-render only the card grid (mode switch or DUT label change) */
+function renderCards(animate) {
+  const host = $('#cards-field'); if (!host) return;
+  host.innerHTML = `<div class="cards-label">${cardsLabel()}</div>${cardsHtml()}`;
+  if (!animate) $('.cards', host).classList.remove('stagger');
+  else if (!reduced()) { host.classList.remove('xfade'); void host.offsetWidth; host.classList.add('xfade'); }
+  if (S.unlockFx && S.lobby.mode === 'ladder' && S.unlockFx.dut === S.lobby.dut.trim()) S.unlockFx = null;
+}
+function selectedOpen() {
+  const L = S.lobby; if (!L.game) return false;
+  const g = gameByKey(L.game); if (!g) return false;
+  if (L.mode === 'ladder') return WF_OK && g.kind === 'ladder' && levelState(L.dut, g.level) !== 'LOCKED';
+  return g.kind === 'stress';
+}
+function lobbyValid() { const L = S.lobby; return !!(L.target && selectedOpen() && L.dut.trim().length >= 1 && L.dut.trim().length <= 40); }
 function generateWhy() {
   const L = S.lobby, miss = [];
-  if (!L.dut.trim()) miss.push('a DUT label'); if (!L.game) miss.push('a stress game');
+  if (!L.dut.trim()) miss.push('a DUT label'); if (!selectedOpen()) miss.push(L.mode === 'ladder' ? 'an open ladder level' : 'a stress game');
   return miss.length ? `Needs ${miss.join(' and ')}.` : 'Ready. Generation takes under 2 s.';
 }
 function syncLobby() {
   const b = $('#generate'); if (!b) return;
   b.setAttribute('aria-disabled', String(!lobbyValid()));
   const w = $('#gen-why'); if (w) w.textContent = generateWhy();
+  const h = $('#diff-hint'); if (h) h.textContent = diffHint(S.lobby.difficulty, S.lobby.mode, S.lobby.game);
 }
 
+function specBaseline() {
+  if (!WF_OK) return '—';
+  const sb = DATA.workflows.specBaseline, out = [];
+  ['defaultMessageContents', 'rrc', 'nas5gs', 'ims', 'conformanceProcedures'].forEach(k => { const m = /TS\s*([\d.]+(?:-\d)?)/.exec(sb[k] || ''); if (m && !out.includes(m[1])) out.push(m[1]); });
+  return 'TS ' + out.join(' · ');
+}
+function verifyBadge(branches) {
+  const ids = [...new Set(branches.flatMap(m => m.flow.wfIds))], paths = verifyPaths(ids);
+  if (!paths.length) return '<span class="t-caption">No defaults to verify</span>';
+  return `<span class="badge b-warn" id="tc-verify" tabindex="0" data-tip="${esc(paths.slice(0, 3).join(', '))}">${icon('alert')}${paths.length} defaults to verify</span>`;
+}
+function flowPanelHtml(m) {
+  const f = m.flow;
+  const head = `<div class="panel-title"><h2 class="t-h2" id="mf-h">Message flow</h2><span class="jp-sub" aria-hidden="true">手順</span>
+    <span class="wftag" id="mf-wf">${esc(f.label)}</span>${f.synthetic ? '<span class="tag">Partly outside library</span>' : ''}</div>
+    <p class="mf-branch" id="mf-branch">${esc(m.name)}</p>`;
+  if (!f.steps.length) return `<section class="panel flow-panel" id="flow-panel" aria-labelledby="mf-h" aria-live="polite">${head}
+    <p class="t-caption" id="mf-none">No library workflow (tester-defined). ${esc(m.tip)}.</p></section>`;
+  let prev = null;
+  const rows = f.steps.map((s, i) => {
+    // group rule whenever the source workflow changes (expanded `ref`/`extends` steps)
+    const key = s.expanded ? s.from : f.label.split(' · ')[0];
+    const grp = key !== prev && (i > 0 || s.expanded) ? `<tr class="grp"><td colspan="5">${s.expanded ? 'from ' : ''}${esc(key)}</td></tr>` : '';
+    prev = key;
+    const inj = i === f.inject;
+    return `${grp}<tr class="${inj ? 'inj' : ''}${s.optional ? ' opt' : ''}" data-n="${s.n}">
+      <td class="num">${s.n}</td>
+      <td class="dir" title="${DIR_LABEL[s.dir] || ''}"><span aria-hidden="true">${DIR_GLYPH[s.dir] || '·'}</span><span class="sr-only">${DIR_LABEL[s.dir] || s.dir}</span> <span class="t-data muted">${esc(s.dir)}</span></td>
+      <td><span class="ltag">${esc(s.layer || '—')}</span></td>
+      <td class="msg">${trunc(s.message, 48, 't-data')}${s.container ? `<span class="t-caption cont">${trunc(s.container, 40)}</span>` : ''}${s.note ? `<span class="t-caption cont">${esc(s.note)}</span>` : ''}
+        ${inj ? '<span class="tag inj-tag">Injection</span>' : ''}${s.synthetic ? '<span class="tag">Not in library</span>' : ''}</td>
+      <td class="tm t-data">${esc(stepTimers(s.timers))}</td></tr>`;
+  }).join('');
+  const list = f.steps.map((s, i) => `<li class="${i === f.inject ? 'inj' : ''}"><span class="t-data">${s.n} ${DIR_GLYPH[s.dir] || '·'} ${esc(s.layer)}</span> ${trunc(s.message, 48, 't-data')}${i === f.inject ? ' <span class="tag inj-tag">Injection</span>' : ''}${stepTimers(s.timers) ? `<span class="t-caption cont">${esc(stepTimers(s.timers))}</span>` : ''}</li>`).join('');
+  return `<section class="panel flow-panel" id="flow-panel" aria-labelledby="mf-h">${head}
+    <table class="tbl flow"><caption class="sr-only">${f.steps.length} workflow steps for ${esc(m.name)}</caption>
+      <thead><tr><th scope="col" class="num">#</th><th scope="col">Dir</th><th scope="col">Layer</th><th scope="col">Message</th><th scope="col" class="num">Timers</th></tr></thead><tbody>${rows}</tbody></table>
+    <ol class="flow-list" id="flow-list">${list}</ol>
+    ${f.steps.length > 8 ? `<button class="btn btn-ghost show-all flow-more" data-action="show-all" data-target="flow-list" aria-controls="flow-list" aria-expanded="false">Show all ${f.steps.length}</button>` : ''}
+    <p class="flow-exp"><span class="t-label">Expected behaviour</span><span id="mf-exp">${esc(f.expected)}</span></p>
+  </section>`;
+}
 function viewBriefing() {
   const tc = S.testcase, g = gameByKey(tc.game), d = CONFIG.difficulty[tc.difficulty];
   const c = tc.cohort, pct = k => (c[k] / c.total * 100).toFixed(1);
+  const ladder = g.kind === 'ladder';
+  const branches = ladder ? g.moves.slice(0, tc.branchCount) : [];
   return `<section class="screen briefing" aria-labelledby="screen-h1">
     ${titleBlock('BRIEFING', '概要', esc(tc.summary))}
     <div class="brief-grid">
       <div class="stack">
+        <section class="panel model-panel" aria-labelledby="gm-h"><div class="panel-title"><h2 class="t-label" id="gm-h">Game model</h2></div>
+          <p class="model-name c-fuji t-strong" id="tc-model">${esc(g.model)}</p>
+          <p class="model-exp" id="tc-explainer">${esc(g.explainer)}</p>
+          ${ladder ? `<div class="branch-head"><span class="t-label" id="br-h">Branch set</span><span class="t-caption" id="tc-nb">${branches.length} branches</span></div>
+          <ol class="branches" id="branches" aria-labelledby="br-h">${branches.map((m, i) => `<li><button type="button" class="br-row" data-action="pick-branch" data-i="${i}" aria-pressed="${i === (tc.sel || 0)}" aria-controls="flow-panel" data-tip="${esc(m.tip)}">
+            <span class="t-data muted">${pad2(i + 1)}</span><span class="br-name">${esc(m.name)}${i === 0 ? ' <span class="tag">Baseline</span>' : ''}</span><span class="wftag${m.flow.label === '—' ? ' none' : ''}">${esc(m.flow.label)}</span></button></li>`).join('')}</ol>
+          ${branches.length > 4 ? `<button class="btn btn-ghost show-all" data-action="show-all" data-target="branches" aria-controls="branches" aria-expanded="false">Show all ${branches.length}</button>` : ''}
+          <p class="clear-rule"><span class="t-label">Clear rule</span><span id="tc-clear">${esc(tc.clearRule)}</span></p>` : ''}
+        </section>
+        ${ladder ? flowPanelHtml(branches[tc.sel || 0]) : ''}
         <section class="panel" aria-labelledby="mix-h"><div class="panel-title"><h2 class="t-label" id="mix-h">Cohort mix</h2><span class="t-caption">${int(c.total)} UEs total</span></div>
           <div class="mix-nums">${SLICES.map(s => `<div><span class="sw t-caption">${shapeSvg(s.key)}${s.label}</span><span class="t-data-l">${int(c[s.key])}</span><span class="t-caption">${pct(s.key)}%</span></div>`).join('')}</div>
           <div class="mixbar" role="img" aria-label="URLLC ${pct('urllc')}%, eMBB ${pct('embb')}%, mMTC ${pct('mmtc')}%">${SLICES.map(s => `<span class="bg-${s.key}" style="width:${pct(s.key)}%"></span>`).join('')}</div>
         </section>
         <section class="panel" aria-labelledby="cap-h"><div class="panel-title"><h2 class="t-label" id="cap-h">Source captures</h2><span class="t-caption">${tc.captures.length} from the embedded datalake sample</span></div>
           <ul class="caps" id="caps">${tc.captures.map(cp => `<li><span class="t-data">${esc(cp.id)}</span><span>${esc(cp.location)} <span class="t-caption">· ${esc(cp.profile)}</span></span><span class="t-data muted">${esc(cp.date)}</span></li>`).join('')}</ul>
-          ${tc.captures.length > 2 ? `<button class="btn btn-ghost show-all" data-action="show-all" aria-controls="caps" aria-expanded="false">Show all ${tc.captures.length}</button>` : ''}
+          ${tc.captures.length > 2 ? `<button class="btn btn-ghost show-all" data-action="show-all" data-target="caps" aria-controls="caps" aria-expanded="false">Show all ${tc.captures.length}</button>` : ''}
         </section>
       </div>
       <div class="stack">
@@ -1299,12 +2063,15 @@ function viewBriefing() {
             <dt>Testcase ID</dt><dd><span class="t-data" id="tc-id">${esc(tc.id)}</span>${copyBtn(tc.id, 'testcase ID')}</dd>
             <dt>Seed</dt><dd><span class="t-data" id="tc-seed">${esc(tc.seed)}</span>${copyBtn(tc.seed, 'seed')}</dd>
             <dt>Generation</dt><dd><span class="t-data" id="tc-gen">${tc.genTime.toFixed(2)} s</span></dd>
-            <dt>Game</dt><dd>${esc(g.name)} · ${esc(d.label)}</dd>
+            <dt>Game</dt><dd>${esc(headerName(g))} · ${esc(d.label)}</dd>
             <dt>Target</dt><dd>${esc(TARGETS[tc.target])}</dd>
             <dt>DUT</dt><dd>${trunc(tc.dut, 40)}</dd>
+            ${ladder ? `<dt>Spec baseline</dt><dd class="t-caption" id="tc-spec">${esc(specBaseline())}</dd>
+            <dt>Library</dt><dd>${verifyBadge(branches)}</dd>` : ''}
           </dl></section>
         <section class="panel" aria-labelledby="stop-h"><div class="panel-title"><h2 class="t-label" id="stop-h">Stop conditions</h2></div>
           <ul class="stops"><li>${icon('stop')}<span>User Stop</span></li>
+          ${ladder ? `<li>${icon('check')}<span>Level clear</span></li>` : ''}
           ${CONFIG.failureKpis[g.key].map(k => `<li>${icon('alert')}<span>${esc(KPI[k].label)} ${esc(thrText(k))} for ${CONFIG.failHoldTicks / 10} s</span></li>`).join('')}</ul></section>
       </div>
     </div>
@@ -1318,7 +2085,7 @@ function viewBriefing() {
 
 function viewArenaEmpty() {
   return `<section class="screen" aria-labelledby="screen-h1">${titleBlock('ARENA', '闘技場')}
-    <div class="arena-empty"><p class="t-h3">No game running</p><p>Choose a target and a stress game in the Lobby, then press Play.</p>
+    <div class="arena-empty"><p class="t-h3">No game running</p><p>Choose a target and a stress game or ladder level in the Lobby, then press Play.</p>
     <a class="btn btn-ghost" href="#/lobby">Go to Lobby</a></div></section>`;
 }
 function viewArena() {
@@ -1326,8 +2093,12 @@ function viewArena() {
   return `<section class="screen arena" aria-labelledby="screen-h1">
     <header class="arena-head panel">
       <div class="ah-id"><h1 class="t-h1" id="screen-h1" tabindex="-1">${esc(g.label)}</h1><span class="jp-sub" aria-hidden="true">闘技場</span></div>
-      <div class="ah-meta"><span class="t-strong">${esc(g.game.name)} · ${esc(g.d.label)}</span>${trunc(tc.dut, 40, 'dut t-data')}</div>
+      <div class="ah-meta"><span class="t-strong">${esc(headerName(g.game))} · ${esc(g.d.label)}</span>${trunc(tc.dut, 40, 'dut t-data')}</div>
       <div class="ah-time"><span class="t-label">Elapsed</span><span class="t-data-l" id="a-elapsed">00:00:00</span></div>
+      ${g.ladder ? `<div class="ah-cov" id="a-cov-wrap"><span class="t-label" id="a-cov-l">Branch coverage</span>
+        <span class="t-data-l" id="a-cov" aria-labelledby="a-cov-l"><span class="cov-n">0 / ${g.list.length}</span><span class="cov-p"> · 0%</span></span>
+        <span class="cov-bar" aria-hidden="true"><span class="cov-fill" id="a-cov-fill"></span></span></div>
+      <div class="ah-step"><span class="t-label">Workflow</span><span class="t-data" id="a-step">—</span></div>` : ''}
       <div class="ah-right">
         <span class="badge chamfer b-hisui" id="a-badge">${icon('play')}<span>RUNNING</span></span>
         <button type="button" class="btn btn-stop chamfer" data-action="stop" data-tip="Stop game (S)" aria-keyshortcuts="S">${icon('stop')}STOP</button>
@@ -1342,7 +2113,7 @@ function viewArena() {
       <div class="cohort-head">
         <div><h2 class="t-h2" id="cohort-h">Cohort · leader</h2>
           <div class="slices">${SLICES.map(s => `<span class="sw t-caption">${shapeSvg(s.key)}${s.label} <span class="t-data" id="a-s-${s.key}">0</span></span>`).join('')}</div></div>
-        <div class="move-now"><span class="t-label">Current move</span><span class="t-strong" id="a-move">—</span></div>
+        <div class="move-now"><span class="t-label">${g.ladder ? 'Current branch' : 'Current move'}</span><span class="t-strong" id="a-move">—</span>${g.ladder ? '<span class="t-data muted" id="a-move-wf">—</span>' : ''}</div>
       </div>
       <div class="canvas-wrap" id="a-canvas-wrap">
         <canvas id="a-canvas" role="img" aria-label="Cohort of ${int(tc.cohort.total)} UEs attacking the ${esc(TARGETS[tc.target])} DUT"></canvas>
@@ -1353,26 +2124,26 @@ function viewArena() {
     </section>
     <section class="panel chamfer cut-l agent" id="a-agent" aria-labelledby="agent-h">
       <div class="panel-title"><div style="display:flex;align-items:baseline;gap:var(--space-3)"><h2 class="t-h2" id="agent-h">Agent loop</h2><span class="jp-sub" aria-hidden="true">戦略</span></div>
-        <span class="agent-tag">${esc(CONFIG.agentVersion)}</span>
+        <span class="agent-tag">${esc(agentLabel(g.game))}</span>
         <button type="button" class="icon-btn agent-toggle" data-action="toggle-agent" aria-expanded="false" aria-controls="agent-body" aria-label="Show agent loop">${icon('chevronDown')}</button></div>
       <div class="agent-body" id="agent-body">
         <div class="loop">
           <div class="loop-box"><span class="t-label">State</span>
-            <ul class="state-vals t-caption"><li>RACH <span class="t-data" id="a-st-rach">0 /s</span></li><li>PRB <span class="t-data" id="a-st-prb">0.0%</span></li><li>Rejects <span class="t-data" id="a-st-rej">0 /s</span></li></ul></div>
+            <ul class="state-vals t-caption">${g.game.state.map((st, i) => `<li>${esc(st.label)} <span class="t-data" id="a-st-${i}">—</span></li>`).join('')}</ul></div>
           <span class="loop-arrow" aria-hidden="true">${icon('arrowRight')}</span>
-          <div class="loop-box"><span class="t-label">Reward</span><span class="t-data-l c-kin" id="a-reward-mini">+0.00</span><span class="t-caption">QoS · reject, latency, drop</span></div>
+          <div class="loop-box"><span class="t-label">Reward</span><span class="t-data-l c-kin" id="a-reward-mini">+0.00</span><span class="t-caption">QoS · ${esc(g.game.reward.map(c => c.label.toLowerCase()).join(', '))}</span></div>
           <span class="loop-arrow" aria-hidden="true">${icon('arrowRight')}</span>
           <div class="loop-box act"><span class="t-label">Action</span><span class="t-strong c-fuji" id="a-action">—</span><span class="t-caption">Best response</span></div>
         </div>
         <div class="reward-row"><div><span class="t-label">Reward</span><div class="t-dl reward-val" id="a-reward">+0.00</div></div>
-          <div class="breakdown t-caption"><span>Reject <span class="t-data" id="a-r-reject">+0.00</span></span><span>Latency <span class="t-data" id="a-r-latency">+0.00</span></span><span>Drop <span class="t-data" id="a-r-drop">+0.00</span></span></div></div>
+          <div class="breakdown t-caption">${g.game.reward.map((c, i) => `<span>${esc(c.label)} <span class="t-data" id="a-r-${i}">+0.00</span></span>`).join('')}</div></div>
         <div class="score-block chamfer"><span class="brackets" aria-hidden="true"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span></span>
           <div><span class="t-label">Total score</span> <span class="jp-sub" aria-hidden="true">得点</span></div><div class="t-dl" id="a-score">0</div></div>
       </div>
     </section>
     <section class="panel diag" aria-labelledby="diag-h">
       <div class="panel-title"><h2 class="t-h2" id="diag-h">Diagnostics</h2><span class="jp-sub" aria-hidden="true">診断</span></div>
-      ${KPIS.map(k => `<div class="kpi" id="kpi-${k.key}" tabindex="0" data-tip-kpi="${k.key}" role="group" aria-label="${esc(k.label)}">
+      ${g.kpiList.map(k => `<div class="kpi" id="kpi-${k.key}" tabindex="0" data-tip-kpi="${k.key}" role="group" aria-label="${esc(k.label)}">
         <span class="t-label">${esc(k.label)}</span>
         <span class="kv-val"><span class="t-data-l v" id="kv-${k.key}">0</span><span class="u">${esc(k.unit)}</span><span class="bico" aria-hidden="true">${icon('alert')}</span><span class="sr-only" id="kb-${k.key}"></span></span>
         <svg class="spark" viewBox="0 0 59 28" preserveAspectRatio="none" aria-hidden="true"><line class="thr" x1="0" x2="59" id="kt-${k.key}"/><polyline class="ln" id="kl-${k.key}" points=""/></svg>
@@ -1382,41 +2153,68 @@ function viewArena() {
         <button type="button" class="jump" id="a-jump" data-action="jump" hidden>${icon('arrowUp')}Jump to latest</button></div>
     </section>
     <div class="hanko-layer" id="a-hanko" hidden></div>
+    <div class="clear-blade" id="a-clear-blade" aria-hidden="true" hidden></div>
   </section>`;
 }
 
+function failDetail(b) {
+  const s = b.stepReached;
+  return `<span class="fail-detail t-caption">${s ? `Reached ${esc(s.wf.split(' · ')[0])} step ${s.n} / ${s.of}: <span class="t-data">${esc(s.message.slice(0, 48))}</span>. ` : ''}${b.expected ? 'Expected: ' + esc(b.expected) : ''}</span>`;
+}
 function viewGameOver(run) {
-  const down = run.outcome === 'DUT DOWN';
+  const down = run.outcome === 'DUT DOWN', clear = run.outcome === 'LEVEL CLEAR';
   const g = gameByKey(run.game), d = CONFIG.difficulty[run.difficulty];
-  const banner = down ? 'DUT DOWN' : 'GAME STOPPED';
+  const banner = down ? 'DUT DOWN' : clear ? 'LEVEL CLEAR' : run.outcome === 'PLATFORM ERROR' ? 'PLATFORM ERROR' : 'GAME STOPPED';
+  const seal = down ? `<div class="hanko" aria-hidden="true"><span class="pat"></span><span class="k">故障</span></div>`
+    : clear ? `<div class="clearmark chamfer" aria-hidden="true"><span class="k">突破</span>${icon('check')}</div>` : '';
+  const kpis = kpisOf(g);
+  const next = clear && g.kind === 'ladder' ? levelByN(g.level + 1) : null;
+  let actions;
+  if (clear && next) actions = `<button type="button" class="btn btn-hero btn-primary chamfer" data-action="next-level" data-run="${esc(run.runId)}">NEXT LEVEL${icon('next')}</button>
+          <button type="button" class="btn btn-secondary chamfer" data-action="replay" data-run="${esc(run.runId)}">${icon('replay')}Replay</button>`;
+  else if (clear) actions = `<a class="btn btn-hero btn-primary chamfer" href="#/lobby">NEW GAME</a>
+          <button type="button" class="btn btn-secondary chamfer" data-action="replay" data-run="${esc(run.runId)}">${icon('replay')}Replay</button>`;
+  else actions = `<button type="button" class="btn btn-hero btn-primary chamfer" data-action="replay" data-run="${esc(run.runId)}">${icon('replay')}REPLAY</button>
+          <a class="btn btn-secondary chamfer" href="#/lobby">New game</a>`;
+  const resIcon = { Passed: ['check', 'c-hisui'], Failed: ['x', 'c-shu'], 'Not reached': ['circleDashed', 'muted'] };
+  const branchPanel = run.branches ? `<section class="panel" aria-labelledby="br-res-h"><div class="panel-title"><h2 class="t-label" id="br-res-h">Branch results</h2>
+      <span class="t-caption">${run.branches.filter(b => b.result === 'Passed').length} of ${run.branches.length} passed</span></div>
+      <table class="tbl br-table"><thead><tr><th scope="col">Branch</th><th scope="col">Workflow</th><th scope="col">Result</th><th scope="col" class="num">First passed</th></tr></thead>
+      <tbody>${run.branches.map(b => `<tr class="${b.result === 'Failed' ? 'breached' : ''}"><td>${esc(b.name)}${b.result === 'Failed' ? failDetail(b) : ''}</td><td><span class="wftag">${esc(b.wf || '—')}</span></td>
+        <td><span class="br-res ${resIcon[b.result][1]}">${icon(resIcon[b.result][0])}${esc(b.result)}</span></td><td class="num">${b.t != null ? '+' + hms(b.t) : '—'}</td></tr>`).join('')}</tbody></table>
+      <ul class="kpi-list br-list">${run.branches.map(b => `<li class="${b.result === 'Failed' ? 'breached' : ''}"><span class="br-res ${resIcon[b.result][1]}">${icon(resIcon[b.result][0])}${esc(b.name)}</span><span class="t-data">${esc(b.wf || '—')} · ${esc(b.result)}${b.t != null ? ' · +' + hms(b.t) : ''}</span>${b.result === 'Failed' ? failDetail(b) : ''}</li>`).join('')}</ul>
+    </section>` : '';
   return `<section class="screen gameover has-pattern" aria-labelledby="screen-h1">
-    <div class="go-hero ${down ? '' : 'no-seal'}">
+    <div class="go-hero ${seal ? '' : 'no-seal'}">
       <div class="seigaiha" aria-hidden="true"></div>
-      ${down ? `<div class="hanko" aria-hidden="true"><span class="pat"></span><span class="k">故障</span></div>` : ''}
+      ${seal}
       <div>
-        <div class="title-row"><h1 class="t-dxl go-banner ${down ? '' : 'stopped'}" id="screen-h1" tabindex="-1">${banner}</h1>${down ? '' : '<span class="jp-sub" aria-hidden="true">終了</span>'}</div>
+        <div class="title-row"><h1 class="t-dxl go-banner ${down ? '' : 'stopped'}" id="screen-h1" tabindex="-1">${banner}</h1>${down || clear ? '' : '<span class="jp-sub" aria-hidden="true">終了</span>'}</div>
         <span class="blade" aria-hidden="true"></span>
         <p class="go-reason" id="go-reason">${esc(run.reason.slice(0, 100))}</p>
+        ${run.unlockNotice ? `<p class="unlock-note" id="go-unlock">${icon('check')}<span>${esc(run.unlockNotice)}</span></p>` : ''}
         <div class="go-stats">
-          <div class="stat"><span class="t-label">${down ? 'Time to failure' : 'Duration'}</span><span class="t-data-l" id="go-time">${hms(run.durationSec)}</span></div>
+          <div class="stat"><span class="t-label">${down ? 'Time to failure' : clear ? 'Time to clear' : 'Duration'}</span><span class="t-data-l" id="go-time">${hms(run.durationSec)}</span></div>
           <div class="stat"><span class="t-label">Final score</span><span class="score" id="go-score">${int(run.score)}</span></div>
-          <div class="stat"><span class="t-label">Run</span><span class="t-strong">${esc(run.label)} · ${esc(g.name)} · ${esc(d.label)}</span>${trunc(run.dut, 40, 't-data muted')}</div>
+          <div class="stat"><span class="t-label">Run</span><span class="t-strong">${esc(run.label)} · ${esc(headerName(g))} · ${esc(d.label)}</span>${trunc(run.dut, 40, 't-data muted')}</div>
           <div class="stat"><span class="t-label">Outcome</span>${outcomeBadge(run.outcome)}</div>
         </div>
         <div class="go-actions">
-          <button type="button" class="btn btn-hero btn-primary chamfer" data-action="replay" data-run="${esc(run.runId)}">${icon('replay')}REPLAY</button>
-          <a class="btn btn-secondary chamfer" href="#/lobby">New game</a>
+          ${actions}
           <button type="button" class="btn btn-secondary chamfer" data-action="download" data-run="${esc(run.runId)}">${icon('download')}Download logs</button>
           <a class="btn btn-ghost" href="#/history">View in History</a>
         </div>
       </div>
     </div>
     <div class="go-grid">
+      <div class="side-stack">
+      ${branchPanel}
       <section class="panel" aria-labelledby="snap-h"><div class="panel-title"><h2 class="t-label" id="snap-h">KPI snapshot at end</h2></div>
         <table class="tbl kpi-table"><thead><tr><th scope="col">KPI</th><th scope="col" class="num">Value</th><th scope="col" class="num">Threshold</th><th scope="col">Status</th></tr></thead>
-        <tbody>${KPIS.map(k => { const s = run.kpi[k.key]; return `<tr class="${s.breached ? 'breached' : ''}"><td>${esc(k.label)}</td><td class="num">${kpiText(k.key, s.value)}</td><td class="num">${s.dir === 'below' ? '≥' : '≤'} ${kpiText(k.key, s.limit)}</td><td>${s.breached ? `<span class="badge b-shu">${icon('alert')}Breached</span>` : '<span class="t-caption">Within limit</span>'}</td></tr>`; }).join('')}</tbody></table>
-        <ul class="kpi-list">${KPIS.map(k => { const s = run.kpi[k.key]; return `<li class="${s.breached ? 'breached' : ''}"><span>${s.breached ? icon('alert') : ''} ${esc(k.label)}</span><span class="t-data">${kpiText(k.key, s.value)} / ${kpiText(k.key, s.limit)}${s.breached ? ' · breached' : ''}</span></li>`; }).join('')}</ul>
+        <tbody>${kpis.map(k => { const s = run.kpi[k.key]; return `<tr class="${s.breached ? 'breached' : ''}"><td>${esc(k.label)}</td><td class="num">${kpiText(k.key, s.value)}</td><td class="num">${s.dir === 'below' ? '≥' : '≤'} ${kpiText(k.key, s.limit)}</td><td>${s.breached ? `<span class="badge b-shu">${icon('alert')}Breached</span>` : '<span class="t-caption">Within limit</span>'}</td></tr>`; }).join('')}</tbody></table>
+        <ul class="kpi-list">${kpis.map(k => { const s = run.kpi[k.key]; return `<li class="${s.breached ? 'breached' : ''}"><span>${s.breached ? icon('alert') : ''} ${esc(k.label)}</span><span class="t-data">${kpiText(k.key, s.value)} / ${kpiText(k.key, s.limit)}${s.breached ? ' · breached' : ''}</span></li>`; }).join('')}</ul>
       </section>
+      </div>
       <div class="side-stack">
         <section class="panel" aria-labelledby="mv-h"><div class="panel-title"><h2 class="t-label" id="mv-h">Triggering moves</h2><span class="t-caption">Last 5, oldest first</span></div>
           <ol class="moves" id="go-moves">${run.triggering.map(m => `<li><span class="t-data muted">+${hms(m.t)}</span><span>${esc(m.move)}</span></li>`).join('')}</ol></section>
@@ -1434,9 +2232,10 @@ function viewHistory() {
     ${titleBlock('HISTORY', '履歴')}
     <div class="filters" role="search" aria-label="Filter runs">
       <div class="field"><label class="t-label" for="f-game">Game</label><span class="select-wrap"><select class="input" id="f-game" data-filter="game">
-        <option value="all">All games</option>${DATA.games.map(g => `<option value="${g.key}" ${F.game === g.key ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>${icon('chevronDown','chev')}</span></div>
+        <option value="all">All games</option><optgroup label="Stress games">${DATA.games.map(g => `<option value="${g.key}" ${F.game === g.key ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</optgroup>
+        <optgroup label="Procedure Ladder">${DATA.ladder.map(g => `<option value="${g.key}" ${F.game === g.key ? 'selected' : ''}>${esc(g.short)}</option>`).join('')}</optgroup></select>${icon('chevronDown','chev')}</span></div>
       <div class="field"><label class="t-label" for="f-out">Outcome</label><span class="select-wrap"><select class="input" id="f-out" data-filter="outcome">
-        <option value="all">All outcomes</option>${['DUT DOWN', 'STOPPED', 'PLATFORM ERROR'].map(o => `<option value="${o}" ${F.outcome === o ? 'selected' : ''}>${o}</option>`).join('')}</select>${icon('chevronDown','chev')}</span></div>
+        <option value="all">All outcomes</option>${['DUT DOWN', 'STOPPED', 'LEVEL CLEAR', 'PLATFORM ERROR'].map(o => `<option value="${o}" ${F.outcome === o ? 'selected' : ''}>${o}</option>`).join('')}</select>${icon('chevronDown','chev')}</span></div>
       <div class="field"><label class="t-label" for="f-q">DUT contains</label><input class="input" id="f-q" data-filter="q" type="search" autocomplete="off" value="${esc(F.q)}" placeholder="e.g. sw 4.2"></div>
       <span class="t-caption" id="f-count" aria-live="polite"></span>
     </div>
@@ -1462,7 +2261,7 @@ function renderHistoryBody() {
   const runs = filteredRuns();
   $('#f-count').textContent = `${runs.length} run${runs.length === 1 ? '' : 's'}`;
   if (!runs.length) { host.innerHTML = `<p class="empty panel">No runs match these filters.</p>`; return; }
-  const gname = r => gameByKey(r.game).name, dname = r => CONFIG.difficulty[r.difficulty].label;
+  const gname = gameName, dname = r => CONFIG.difficulty[r.difficulty].label;
   host.innerHTML = `<div class="tbl-wrap"><table class="tbl runs"><caption class="sr-only">Saved runs, newest first</caption>
     <thead><tr><th scope="col" class="exp"><span class="sr-only">Expand</span></th><th scope="col">Date</th><th scope="col">Game ID</th><th scope="col">DUT</th><th scope="col">Game</th><th scope="col">Difficulty</th><th scope="col" class="num">Duration</th><th scope="col">Outcome</th><th scope="col" class="num">Score</th></tr></thead>
     <tbody class="stagger">${runs.map((r, i) => { const open = S.histOpen.has(r.runId); return `<tr class="row ${open ? 'open' : ''}" style="--i:${Math.min(i, 8)}">
@@ -1477,6 +2276,18 @@ function renderHistoryBody() {
       <a class="btn btn-ghost" href="#/gameover/${esc(r.runId)}" style="align-self:flex-start">Open report</a></li>`).join('')}</ul>`;
 }
 
+function workflowPanelHtml() {
+  const L = DATA.workflows || {};
+  if (!WF_OK) return `<section class="panel" aria-labelledby="wl-h"><h2 class="t-label" id="wl-h">Workflow library</h2>
+    <p class="wf-error" role="alert">${icon('alert')}<span>Workflow library version not supported (${esc(String(L.schema || '—'))} ${esc(String(L.schemaVersion || ''))}). Ladder levels are unavailable.</span></p></section>`;
+  return `<section class="panel wl-panel" aria-labelledby="wl-h"><div class="panel-title"><h2 class="t-label" id="wl-h">Workflow library</h2><span class="jp-sub" aria-hidden="true">手順</span></div>
+    <dl class="kv"><dt>Schema</dt><dd class="t-data" id="wl-schema">${esc(L.schema)} ${esc(L.schemaVersion)}</dd>
+      <dt>Technology</dt><dd>${esc(L.technology)}</dd>
+      <dt>Generated</dt><dd class="t-data">${esc(L.generated)}</dd>
+      <dt>Spec baseline</dt><dd class="t-caption">${esc(specBaseline())}</dd>
+      <dt>Verify</dt><dd><span class="badge b-warn" id="wl-verify" data-tip="Check against your TS 38.508-1 baseline">${icon('alert')}${libraryVerifyCount()} fields to verify</span></dd></dl>
+    <ul class="wl-list" id="wl-list" aria-label="${L.workflows.length} workflows">${L.workflows.map(w => `<li><span class="wftag">${esc(w.id)}</span><span>${esc(w.name)}</span><span class="t-caption">${esc(w.category)}</span></li>`).join('')}</ul></section>`;
+}
 function viewSettings() {
   return `<section class="screen settings" aria-labelledby="screen-h1">
     ${titleBlock('SETTINGS', '設定', 'This demo runs on the built-in mock adapter. Connecting a real Multi-UE simulator needs a lab deployment.')}
@@ -1487,12 +2298,20 @@ function viewSettings() {
           <span class="t-caption">Multi-UE simulator: requires lab deployment</span></div>
         <dl class="kv"><dt>Host address</dt><dd class="t-data">—</dd>
           <dt>Interface</dt><dd><span class="chips">${['Ethernet/SCPI', 'GPIB', 'USB'].map(x => `<span class="tag">${x}</span>`).join('')}</span><span class="t-caption">Read-only in this build</span></dd>
-          <dt>Max UEs</dt><dd class="t-data">60,000</dd></dl></section>
+          <dt>Max UEs</dt><dd class="t-data">60,000</dd>
+          <dt>Emulated cells</dt><dd class="t-data">3</dd></dl></section>
+      ${workflowPanelHtml()}
+      <section class="panel" aria-labelledby="lu-h"><h2 class="t-label" id="lu-h">Procedure Ladder</h2>
+        <div class="field"><span class="t-label" id="lbl-unlock">Ladder unlocks</span>
+          ${seg('unlock', [{ value: 'progressive', label: 'Progressive' }, { value: 'all', label: 'All unlocked (demo)' }], S.unlockMode, 'Ladder unlocks')}
+          <span class="t-caption" id="unlock-hint">${S.unlockMode === 'all' ? 'Every level is open for every DUT label. Clears are not recorded.' : 'A level opens when the one before it is cleared for the same DUT label.'}</span></div>
+        <dl class="kv"><dt>DUT labels with clears</dt><dd class="t-data" id="set-unlocks">${Object.keys(S.unlocks).length}</dd></dl></section>
       <section class="panel" aria-labelledby="dl-h"><h2 class="t-label" id="dl-h">Data</h2>
         <dl class="kv"><dt>Datalake source</dt><dd>Embedded sample captures (${DATA.captures.length})</dd>
           <dt>Session runs</dt><dd class="t-data" id="set-count">${S.sessionRuns.length}</dd>
           <dt>Storage</dt><dd class="t-caption">${store() ? 'Session runs are kept in this browser' : 'Browser storage is unavailable; runs last until refresh'}</dd></dl>
-        <div><button type="button" class="btn btn-secondary chamfer" data-action="clear-runs">Clear session runs</button></div></section>
+        <div><button type="button" class="btn btn-secondary chamfer" data-action="clear-runs">Clear session runs</button></div>
+        <span class="t-caption">Also clears ladder unlocks.</span></section>
     </div>
   </section>`;
 }
@@ -1507,7 +2326,7 @@ async function route() {
   let { name, arg } = parseHash();
   if (!name) { location.replace('#/lobby'); return; }
   if (!['lobby', 'briefing', 'arena', 'gameover', 'history', 'settings'].includes(name)) { location.replace('#/lobby'); return; }
-  if (name === 'briefing' && !S.testcase) { location.replace('#/lobby'); return; }
+  if (name === 'briefing' && (!S.testcase || (S.testcase.kind === 'ladder' && levelState(S.testcase.dut, S.testcase.level) === 'LOCKED'))) { location.replace('#/lobby'); return; }
   let run = null;
   if (name === 'gameover') { run = findRun(arg); if (!run) { location.replace('#/history'); return; } }
   closeNav(); Tip.hide();
@@ -1527,7 +2346,7 @@ async function route() {
   main.innerHTML = html;
   main.classList.remove('leaving'); main.classList.remove('entering'); void main.offsetWidth; main.classList.add('entering');
   window.scrollTo(0, 0);
-  if (name === 'lobby') syncLobby();
+  if (name === 'lobby') { syncLobby(); if ($('.card.unlocking')) S.unlockFx = null; }
   if (name === 'arena' && S.game && !S.game.ended) mountArena();
   if (name === 'history') renderHistoryBody();
   updateNav();
@@ -1569,19 +2388,20 @@ function mountArena() {
     canvas: $('#a-canvas'), wrap: $('#a-canvas-wrap'), cohort: $('#a-cohort'),
     elapsed: $('#a-elapsed'), badge: $('#a-badge'), dut: $('#a-dut'), move: $('#a-move'), action: $('#a-action'),
     reward: $('#a-reward'), rewardMini: $('#a-reward-mini'), score: $('#a-score'), mScore: $('#m-score'), mReward: $('#m-reward'),
-    parts: { reject: $('#a-r-reject'), latency: $('#a-r-latency'), drop: $('#a-r-drop') },
-    st: { rach: $('#a-st-rach'), prb: $('#a-st-prb'), rej: $('#a-st-rej') },
+    parts: g.game.reward.map((_, i) => $('#a-r-' + i)),
+    st: g.game.state.map((_, i) => $('#a-st-' + i)),
     slices: Object.fromEntries(SLICES.map(s => [s.key, $('#a-s-' + s.key)])),
-    kv: Object.fromEntries(KPIS.map(k => [k.key, $('#kv-' + k.key)])), kpi: Object.fromEntries(KPIS.map(k => [k.key, $('#kpi-' + k.key)])),
-    kl: Object.fromEntries(KPIS.map(k => [k.key, $('#kl-' + k.key)])), kb: Object.fromEntries(KPIS.map(k => [k.key, $('#kb-' + k.key)])),
-    log: $('#a-log'), jump: $('#a-jump'), hanko: $('#a-hanko'),
-    seen: { state: -1, reward: -1, hist: -1, ev: -1, status: -1, move: -1, lastSeq: 0 },
-    ctx: null, w: 0, h: 0, tiles: [], particles: [], wall: 0, stick: true, lastFrame: performance.now(),
+    kv: Object.fromEntries(g.kpiList.map(k => [k.key, $('#kv-' + k.key)])), kpi: Object.fromEntries(g.kpiList.map(k => [k.key, $('#kpi-' + k.key)])),
+    kl: Object.fromEntries(g.kpiList.map(k => [k.key, $('#kl-' + k.key)])), kb: Object.fromEntries(g.kpiList.map(k => [k.key, $('#kb-' + k.key)])),
+    log: $('#a-log'), jump: $('#a-jump'), hanko: $('#a-hanko'), blade: $('#a-clear-blade'),
+    cov: $('#a-cov'), covFill: $('#a-cov-fill'), covWrap: $('#a-cov-wrap'), step: $('#a-step'), moveWf: $('#a-move-wf'),
+    seen: { state: -1, reward: -1, hist: -1, ev: -1, status: -1, move: -1, cov: -1, step: -1, lastSeq: 0 },
+    ctx: null, w: 0, h: 0, tiles: [], particles: [], wall: 0, stick: true, lastFrame: performance.now(), hoShift: 0,
   };
   A.ctx = A.canvas.getContext('2d');
   readColors();
   A.ro = new ResizeObserver(() => sizeCanvas()); A.ro.observe(A.wrap); sizeCanvas();
-  KPIS.forEach(k => { const t = CONFIG.thresholds[k.key]; const y = sparkY(k.key, t.limit); const l = $('#kt-' + k.key); l.setAttribute('y1', y); l.setAttribute('y2', y); });
+  g.kpiList.forEach(k => { const t = CONFIG.thresholds[k.key]; const y = sparkY(k.key, t.limit); const l = $('#kt-' + k.key); l.setAttribute('y1', y); l.setAttribute('y2', y); });
   A.log.addEventListener('scroll', () => { A.stick = A.log.scrollTop <= 4; A.jump.hidden = A.stick; }, { passive: true });
   A.canvas.addEventListener('mousemove', canvasHover);
   A.canvas.addEventListener('mouseleave', () => { clearTimeout(A.tipTimer); Tip.hide(); });
@@ -1618,13 +2438,13 @@ function sparkY(key, v) { const k = KPI[key]; return (28 - (clamp(v, k.min, k.ma
 function canvasHover(e) {
   if (!A || !matchMedia('(hover: hover)').matches) return;
   const r = A.canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-  const t = A.tiles.find(t => Math.abs(t.x - x) <= Math.max(10, t.s * 1.4) && Math.abs(t.y - y) <= Math.max(10, t.s * 1.4));
+  const t = A.tiles.find(t => Math.abs(t.x + A.hoShift - x) <= Math.max(10, t.s * 1.4) && Math.abs(t.y - y) <= Math.max(10, t.s * 1.4));
   clearTimeout(A.tipTimer);
   if (!t) { Tip.hide(); A.hoverTile = null; return; }
   if (A.hoverTile === t && !Tip.el.hidden) return;
   A.hoverTile = t; Tip.hide(); A.hoverTile = t;
   const cx = e.clientX, cy = e.clientY;
-  A.tipTimer = setTimeout(() => { const g = S.game; if (!g || !A) return; Tip.showAt(`${t.label} · ${int(t.share)} UEs · ${g.game.moves[g.moveIdx].name}`, cx, cy); }, 300);
+  A.tipTimer = setTimeout(() => { const g = S.game; if (!g || !A) return; Tip.showAt(`${t.label} · ${int(t.share)} UEs · ${curMove(g).name}`, cx, cy); }, 300);
 }
 
 /* number tweening (score count-up, §5.5) */
@@ -1653,7 +2473,7 @@ function updateArena(force) {
   A.elapsed.textContent = hms(g.tick / 10);
   if (force || sn.state !== g.v.state) {
     sn.state = g.v.state;
-    const m = { 'RUNNING': ['b-hisui', 'play'], 'ESCALATING': ['b-primary', 'arrowUp'], 'STOPPED': ['b-muted', 'stop'], 'DUT DOWN': ['b-shu', 'alert'] }[g.state];
+    const m = { 'RUNNING': ['b-hisui', 'play'], 'ESCALATING': ['b-primary', 'arrowUp'], 'STOPPED': ['b-muted', 'stop'], 'DUT DOWN': ['b-shu', 'alert'], 'CLEARED': ['b-hisui', 'check'] }[g.state];
     A.badge.className = `badge chamfer ${m[0]}`; A.badge.innerHTML = `${icon(m[1])}<span>${g.state}</span>`;
   }
   if (force || sn.status !== g.v.status) {
@@ -1661,7 +2481,7 @@ function updateArena(force) {
     const cls = { Serving: 'b-hisui', Barring: 'b-warn', Rejecting: 'b-warn', Down: 'b-shu' }[g.status];
     A.dut.className = `badge ${cls}`; A.dut.innerHTML = `${icon(g.status === 'Down' ? 'alert' : 'radio')}<span>${g.status}</span>`;
     A.canvas.setAttribute('aria-label', `Cohort of ${int(g.tc.cohort.total)} UEs attacking the ${TARGETS[g.tc.target]} DUT. DUT status: ${g.status}.`);
-    KPIS.forEach(k => {
+    g.kpiList.forEach(k => {
       const b = !!g.breached[k.key];
       A.kpi[k.key].classList.toggle('breach', b);
       A.kb[k.key].textContent = b ? ' breached' : '';
@@ -1673,20 +2493,32 @@ function updateArena(force) {
     pendingFx.escalate = false;
     if (!reduced()) { A.cohort.classList.remove('escalate'); void A.cohort.offsetWidth; A.cohort.classList.add('escalate'); setTimeout(() => A && A.cohort.classList.remove('escalate'), 420); }
   }
-  if (force || sn.move !== g.v.move) { sn.move = g.v.move; const mv = g.game.moves[g.moveIdx].name; A.move.textContent = mv; A.action.textContent = mv; }
+  if (force || sn.move !== g.v.move) { sn.move = g.v.move; const mv = curMove(g).name; A.move.textContent = mv; A.action.textContent = mv; if (A.moveWf) A.moveWf.textContent = curFlow(g) ? curFlow(g).label : '—'; }
+  if (A.step && (force || sn.step !== g.v.step)) {
+    sn.step = g.v.step; const f = curFlow(g);
+    A.step.textContent = f && f.steps.length ? `${f.label.split(' · ')[0]} · step ${Math.max(1, g.stepIdx)} / ${f.steps.length}` : 'Tester-defined';
+  }
+  if (g.ladder && (force || sn.cov !== g.v.cov)) {
+    sn.cov = g.v.cov;
+    const N = g.list.length, pc = Math.round(g.covered / N * 100);
+    A.cov.innerHTML = `<span class="cov-n">${g.covered} / ${N}</span><span class="cov-p"> · ${pc}%</span>`;
+    A.covFill.style.transform = `scaleX(${g.covered / N})`;
+    if (!force && pendingFx.branch && !reduced()) { A.covWrap.classList.remove('flash'); void A.covWrap.offsetWidth; A.covWrap.classList.add('flash'); }
+  }
+  pendingFx.branch = false;
   SLICES.forEach(s => { A.slices[s.key].textContent = int(g.active[s.key]); });
-  A.st.rach.textContent = `${int(g.rachAttempts)} /s`; A.st.prb.textContent = `${g.kpis.prb.toFixed(1)}%`; A.st.rej.textContent = `${int(g.kpis.rejects)} /s`;
-  KPIS.forEach(k => { A.kv[k.key].textContent = g.kpis[k.key].toFixed(k.dec); });
+  g.game.state.forEach((st, i) => { A.st[i].textContent = st.get(g); });
+  g.kpiList.forEach(k => { A.kv[k.key].textContent = g.kpis[k.key].toFixed(k.dec); });
   if (force || sn.reward !== g.v.reward) {
     sn.reward = g.v.reward;
     tweenNum(A.reward, g.reward, 2, true); tweenNum(A.rewardMini, g.reward, 2, true); tweenNum(A.mReward, g.reward, 2, true);
     tweenNum(A.score, g.score, 0); tweenNum(A.mScore, g.score, 0);
-    A.parts.reject.textContent = signed(g.parts.reject); A.parts.latency.textContent = signed(g.parts.latency); A.parts.drop.textContent = signed(g.parts.drop);
+    A.parts.forEach((el, i) => { el.textContent = signed(g.parts[i]); });
     if (!force && !reduced()) { A.reward.classList.remove('flash'); void A.reward.offsetWidth; A.reward.classList.add('flash'); }
   }
   if (force || sn.hist !== g.v.hist) {
     sn.hist = g.v.hist;
-    KPIS.forEach(k => { const h = g.hist[k.key], off = 60 - h.length; A.kl[k.key].setAttribute('points', h.map((v, i) => `${i + off - 1},${sparkY(k.key, v)}`).join(' ')); });
+    g.kpiList.forEach(k => { const h = g.hist[k.key], off = 60 - h.length; A.kl[k.key].setAttribute('points', h.map((v, i) => `${i + off - 1},${sparkY(k.key, v)}`).join(' ')); });
   }
   if (force || sn.ev !== g.v.ev) {
     sn.ev = g.v.ev;
@@ -1705,7 +2537,7 @@ function updateArena(force) {
 function onStateChange(g) {
   const msg = { RUNNING: `${g.label} running`, ESCALATING: `${g.label} escalating to level ${g.levelIdx}`, STOPPED: `${g.label} stopped`, 'DUT DOWN': `DUT down. ${g.reason || ''}` }[g.state];
   if (g.state === 'RUNNING' && g.decisions > 1) return; // announce return from escalation silently
-  if (g.state === 'DUT DOWN') return; // announced with reason in the failure sequence
+  if (g.state === 'DUT DOWN' || g.state === 'CLEARED') return; // announced with reason in the end sequences
   announce(msg);
 }
 
@@ -1714,7 +2546,12 @@ function drawCohort(now, dt) {
   const g = S.game, ctx = A.ctx, W = A.w, H = A.h, rm = reduced();
   ctx.clearRect(0, 0, W, H);
   const live = g.started && !g.ended;
+  const cells = g.ladder && g.game.level === 3;
+  const CELL_X = [0.2, 0.5, 0.8];
+  if (cells) { const want = (CELL_X[g.serving] - 0.5) * W * 0.3; A.hoShift = rm ? want : A.hoShift + (want - A.hoShift) * Math.min(1, dt / 400); }
+  else A.hoShift = 0;
   // tiles
+  ctx.save(); ctx.translate(A.hoShift, 0);
   A.tiles.forEach(t => {
     const col = COLORS['ue-' + t.slice];
     let a = 1;
@@ -1729,8 +2566,9 @@ function drawCohort(now, dt) {
     ctx.globalAlpha = 0.18 * a; ctx.fill(); ctx.globalAlpha = a; ctx.stroke();
     ctx.restore();
   });
+  ctx.restore();
   // DUT
-  const dx = W / 2, dy = H - 44, statusCol = { Serving: COLORS['accent-hisui'], Barring: COLORS['accent-warn'], Rejecting: COLORS['accent-warn'], Down: COLORS['accent-shu'] }[g.status];
+  const dy = H - 44, dx = cells ? W * CELL_X[g.serving] : W / 2, statusCol = { Serving: COLORS['accent-hisui'], Barring: COLORS['accent-warn'], Rejecting: COLORS['accent-warn'], Down: COLORS['accent-shu'] }[g.status];
   // barring wall
   const wantWall = (g.status === 'Barring' || g.status === 'Rejecting') ? 1 : 0;
   A.wall += (wantWall - A.wall) * Math.min(1, dt / 240);
@@ -1738,6 +2576,25 @@ function drawCohort(now, dt) {
     ctx.save(); ctx.globalAlpha = A.wall; ctx.strokeStyle = COLORS['accent-warn']; ctx.setLineDash([6, 6]); ctx.lineWidth = 1.5;
     const wy = Math.max((A.gridBottom || 0) + 12, dy - 50); ctx.beginPath(); ctx.moveTo(W * 0.2, wy); ctx.lineTo(W * 0.8, wy); ctx.stroke(); ctx.restore();
   }
+  if (cells) {
+    // TA boundary: Cells 1–2 in TAC 000001, Cell 3 in TAC 000002
+    ctx.save(); ctx.strokeStyle = COLORS['line-2']; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    const cy = dy - 28; // lift the cells so labels clear the status badge
+    ctx.beginPath(); ctx.moveTo(W * 0.65, cy - 56); ctx.lineTo(W * 0.65, cy + 40); ctx.stroke(); ctx.restore();
+    [0, 1, 2].forEach(ci => {
+      const cx = W * CELL_X[ci], serving = ci === g.serving;
+      ctx.save(); ctx.translate(cx, cy); ctx.strokeStyle = serving ? statusCol : COLORS['text-2']; ctx.globalAlpha = serving ? 1 : 0.6;
+      ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.beginPath();
+      ctx.moveTo(0, -26); ctx.lineTo(-14, 14); ctx.moveTo(0, -26); ctx.lineTo(14, 14);
+      ctx.moveTo(-8, -4); ctx.lineTo(8, -4); ctx.moveTo(-11, 6); ctx.lineTo(11, 6); ctx.moveTo(-18, 14); ctx.lineTo(18, 14);
+      ctx.moveTo(-9, -34); ctx.arc(0, -30, 9, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+      if (serving) { ctx.strokeStyle = COLORS['line-2']; ctx.globalAlpha = 1; ctx.strokeRect(-26, -44, 52, 64); }
+      ctx.fillStyle = COLORS['text-2']; ctx.globalAlpha = 1; ctx.font = '12px Inter, system-ui, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`Cell ${ci + 1}`, 0, 34);
+      ctx.restore();
+    });
+  } else {
   ctx.save(); ctx.translate(dx, dy); ctx.strokeStyle = statusCol; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.beginPath();
   if (g.tc.target === 'gnb') {
     ctx.moveTo(0, -26); ctx.lineTo(-14, 14); ctx.moveTo(0, -26); ctx.lineTo(14, 14);
@@ -1748,17 +2605,18 @@ function drawCohort(now, dt) {
     ctx.moveTo(-5, 4); ctx.lineTo(-5, 0); ctx.moveTo(0, 4); ctx.lineTo(0, -4); ctx.moveTo(5, 4); ctx.lineTo(5, -8);
   }
   ctx.stroke(); ctx.restore();
-  // particles (RACH attempts)
+  }
+  // particles (access attempts)
   if (live && !rm && A.tiles.length) {
-    const rate = clamp(g.rachAttempts / 400, 0.05, 1.2) * dt / 60;
+    const rate = clamp(g.attempts / 400, 0.05, 1.2) * dt / 60;
     if (A.particles.length < 30 && Math.random() < rate) {
       const t = A.tiles[Math.floor(Math.random() * A.tiles.length)];
-      A.particles.push({ x: t.x, y: t.y, t0: now, col: COLORS['ue-' + t.slice] });
+      A.particles.push({ x: t.x + A.hoShift, y: t.y, t0: now, col: COLORS['ue-' + t.slice] });
     }
   }
   A.particles = A.particles.filter(p => now - p.t0 < 600);
   A.particles.forEach(p => {
-    const k = (now - p.t0) / 600, x = p.x + (dx - p.x) * k, y = p.y + (dy - 40 - p.y) * k;
+    const k = (now - p.t0) / 600, x = p.x + (dx - p.x) * k, y = p.y + (dy - (cells ? 68 : 40) - p.y) * k;
     ctx.globalAlpha = 1 - k; ctx.fillStyle = p.col; ctx.fillRect(x - 1, y - 1, 2, 2);
   });
   ctx.globalAlpha = 1;
@@ -1784,7 +2642,7 @@ async function onGenerate(btn) {
   const L = S.lobby;
   if (!lobbyValid()) {
     if (!L.dut.trim()) { L.touched = true; const i = $('#dut'); i.setAttribute('aria-invalid', 'true'); $('#dut-err').hidden = false; i.focus(); }
-    else announce('Choose a stress game to continue.');
+    else announce(S.lobby.mode === 'ladder' ? 'Choose an open ladder level to continue.' : 'Choose a stress game to continue.');
     return;
   }
   if (busy) return; busy = true;
@@ -1851,6 +2709,29 @@ function runFailureSequence(g, run) {
     location.hash = '#/gameover/' + encodeURIComponent(run.runId);
   }, 800 + 1200);
 }
+function runClearSequence(g, run) {
+  dialogClose();
+  if (A) {
+    updateArena(true);
+    A.cohort.classList.add('cleared');
+    if (!reduced() && A.blade) { A.blade.hidden = false; A.blade.classList.remove('cut'); void A.blade.offsetWidth; A.blade.classList.add('cut'); }
+    const layer = A.hanko; layer.hidden = false;
+    layer.innerHTML = `<div class="clearmark chamfer settle"><span class="k" aria-hidden="true">突破</span>${icon('check')}</div>`;
+  }
+  announce(`Level ${g.game.level} cleared. ${run.reason}.${run.unlockNotice ? ' ' + run.unlockNotice + '.' : ''}`);
+  setTimeout(() => {
+    if (S.game === g) S.game = null;
+    location.hash = '#/gameover/' + encodeURIComponent(run.runId);
+  }, 800 + 1200);
+}
+/* NEXT LEVEL: same target, DUT label and difficulty; new seed; straight to Briefing */
+function nextLevel(run) {
+  const g = gameByKey(run.game), next = levelByN(g.level + 1);
+  if (!next || levelState(run.dut, next.level) === 'LOCKED') { location.hash = '#/lobby'; return; }
+  S.lobby = { ...S.lobby, mode: 'ladder', target: run.target, dut: run.dut, game: next.key, difficulty: run.difficulty };
+  S.testcase = generateTestcase(newSeed());
+  location.hash = '#/briefing';
+}
 function dialogClose() { if (dialogOpen) { const s = $('#dialog-root .scrim'); if (s) { $('#dialog-root').innerHTML = ''; dialogOpen = false; } } }
 
 /* ==================================================================
@@ -1868,18 +2749,34 @@ document.addEventListener('click', e => {
       const grp = el.closest('.seg'); const btns = $$('button', grp);
       btns.forEach(b => b.setAttribute('aria-pressed', String(b === el)));
       grp.style.setProperty('--i', btns.indexOf(el)); grp.removeAttribute('data-none');
-      if (name === 'difficulty') $('#diff-hint').textContent = diffHint(v);
+      if (name === 'lmode' && S.lobby.mode !== v) { S.lobby.mode = v; S.lobby.game = null; renderCards(true); }
+      if (name === 'unlock') {
+        S.unlockMode = v; saveStore();
+        const h = $('#unlock-hint'); if (h) h.textContent = v === 'all' ? 'Every level is open for every DUT label. Clears are not recorded.' : 'A level opens when the one before it is cleared for the same DUT label.';
+        announce(v === 'all' ? 'All ladder levels unlocked for demo' : 'Progressive ladder unlocks');
+      }
       syncLobby(); break;
     }
-    case 'game':
+    case 'game': {
+      if (el.getAttribute('aria-disabled') === 'true') { announce(el.dataset.tip || 'Level locked'); break; }
       S.lobby.game = el.dataset.value;
       $$('.card').forEach(c => c.setAttribute('aria-pressed', String(c === el)));
       syncLobby(); break;
+    }
+    case 'next-level': { const run = findRun(el.dataset.run); if (run) nextLevel(run); break; }
+    case 'pick-branch': {
+      const tc = S.testcase; if (!tc) break;
+      const i = +el.dataset.i, g = gameByKey(tc.game); tc.sel = i;
+      $$('.br-row').forEach(b => b.setAttribute('aria-pressed', String(b === el)));
+      const p = $('#flow-panel'); if (p) { p.outerHTML = flowPanelHtml(g.moves[i]); const n = $('#flow-panel'); if (n && !reduced()) n.classList.add('xfade'); }
+      announce(`Message flow: ${g.moves[i].name}, ${g.moves[i].flow.steps.length} steps`);
+      break;
+    }
     case 'generate': onGenerate(el); break;
     case 'regenerate': onRegenerate(el); break;
     case 'back': break;
     case 'play': if (S.testcase) startGame(S.testcase); break;
-    case 'show-all': { const c = $('#caps'); const open = !c.classList.contains('expanded'); c.classList.toggle('expanded', open); el.setAttribute('aria-expanded', String(open)); el.textContent = open ? 'Show fewer' : `Show all ${c.children.length}`; break; }
+    case 'show-all': { const c = $('#' + (el.dataset.target || 'caps')); const open = !c.classList.contains('expanded'); c.classList.toggle('expanded', open); el.setAttribute('aria-expanded', String(open)); el.textContent = open ? 'Show fewer' : `Show all ${c.children.length}`; break; }
     case 'copy': copyText(el); break;
     case 'stop': requestStop(); break;
     case 'jump': if (A) { A.log.scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); A.stick = true; A.jump.hidden = true; } break;
@@ -1888,16 +2785,22 @@ document.addEventListener('click', e => {
     case 'download': { const run = findRun(el.dataset.run); if (run) downloadRun(run); break; }
     case 'expand': { const id = el.dataset.run; if (S.histOpen.has(id)) S.histOpen.delete(id); else S.histOpen.add(id); renderHistoryBody(); const b = $(`[data-action="expand"][data-run="${CSS.escape(id)}"]`); if (b) b.focus(); break; }
     case 'clear-runs':
-      openDialog({ title: 'Clear session runs?', body: `This removes ${S.sessionRuns.length} run${S.sessionRuns.length === 1 ? '' : 's'} from this session and browser. Sample runs stay.`,
+      openDialog({ title: 'Clear session runs?', body: `This removes ${S.sessionRuns.length} run${S.sessionRuns.length === 1 ? '' : 's'} and all ladder unlocks from this session and browser. Sample runs stay.`,
         actions: [{ label: 'Cancel', kind: 'secondary', value: false, default: true }, { label: 'Clear session runs', kind: 'secondary', value: true }] })
-        .then(ok => { if (!ok) return; S.sessionRuns = []; saveStore(); const c = $('#set-count'); if (c) c.textContent = '0'; announce('Session runs cleared'); });
+        .then(ok => { if (!ok) return; S.sessionRuns = []; S.unlocks = {}; S.unlockFx = null; saveStore(); const c = $('#set-count'); if (c) c.textContent = '0'; const u = $('#set-unlocks'); if (u) u.textContent = '0'; announce('Session runs and ladder unlocks cleared'); });
       break;
   }
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'dut') {
+    const before = S.lobby.dut.trim();
     S.lobby.dut = e.target.value;
     if (S.lobby.dut.trim()) { e.target.setAttribute('aria-invalid', 'false'); $('#dut-err').hidden = true; }
+    if (S.lobby.mode === 'ladder' && before !== S.lobby.dut.trim()) {
+      const g = S.lobby.game && gameByKey(S.lobby.game);
+      if (g && levelState(S.lobby.dut, g.level) === 'LOCKED') S.lobby.game = null;
+      renderCards(false);
+    }
     syncLobby();
   }
   if (e.target.dataset.filter === 'q') { S.histFilter.q = e.target.value; renderHistoryBody(); }
@@ -1926,9 +2829,14 @@ function snapshot() {
     route: current.name, playing: !!(g && g.started && !g.ended), label: g ? g.label : null,
     tick: g ? g.tick : 0, elapsedSec: g ? g.tick / 10 : 0, state: g ? g.state : null, status: g ? g.status : null,
     level: g ? g.level : null, score: g ? g.score : null, reward: g ? +g.reward.toFixed(2) : null,
-    kpis: g ? Object.fromEntries(KPIS.map(k => [k.key, +g.kpis[k.key].toFixed(k.dec)])) : null,
+    game: g ? g.game.key : null, mode: g ? g.game.kind : null,
+    kpis: g ? Object.fromEntries(g.kpiList.map(k => [k.key, +g.kpis[k.key].toFixed(k.dec)])) : null,
+    coverage: g && g.ladder ? Object.freeze({ covered: g.covered, total: g.list.length, branch: curMove(g).name, clearAtSec: g.clearTicks / 10 }) : null,
+    serving: g && g.ladder && g.game.level === 3 ? `Cell ${g.serving + 1}` : null,
+    unlocks: Object.freeze({ ...S.unlocks }), unlockMode: S.unlockMode, wfOk: WF_OK,
+    workflow: g && curFlow(g) ? Object.freeze({ label: curFlow(g).label, step: g.stepIdx, of: curFlow(g).steps.length }) : null,
     fps: fps.value, maxFrameMs: fps.maxMs, speed: SPEED, sessionRuns: S.sessionRuns.length,
-    lastRun: r ? Object.freeze({ runId: r.runId, outcome: r.outcome, seed: r.seed, durationTicks: r.durationTicks, score: r.score, reason: r.reason }) : null,
+    lastRun: r ? Object.freeze({ runId: r.runId, game: r.game, outcome: r.outcome, seed: r.seed, durationTicks: r.durationTicks, score: r.score, reason: r.reason, branches: r.branches, unlockNotice: r.unlockNotice }) : null,
   });
 }
 function renderDebug() {

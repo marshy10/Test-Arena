@@ -1,6 +1,11 @@
 # Test Arena — Design Standard
 
-*Visual specification v2 · 29 Oct 2026 · supersedes §5 "Design Standard" in `PRD.md`*
+*Visual specification v2.2 · 2 Nov 2026 · supersedes §5 "Design Standard" in `PRD.md`*
+
+> **Change log**
+> - **v2.2 (2 Nov 2026):** Visuals for the signalling workflow library: the message-flow table, direction glyphs, timer marks, injection steps, workflow reference tags and verify badges; five-level ladder layout; Japanese term 手順.
+> - **v2.1 (2 Nov 2026):** Added visuals for the Procedure Ladder: level cards (locked / open / cleared), the level connector, the clear mark (突破), branch-passed, level-clear and level-unlock moments, and two Japanese vocabulary terms. Level clear joins the `--dur-epic` moments.
+> - **v2 (29 Oct 2026):** Previous release.
 
 ## 0. The atmosphere in one line
 
@@ -14,7 +19,7 @@ Three ideas drive every decision:
 | **Kire** (切れ): the cut | A clean, decisive edge | Sharp corners, hairline rules, chamfered (cut) corners on key surfaces, fast confident motion |
 | **Jo-ha-kyū** (序破急): slow, break, fast | Rhythm of Noh and martial arts | Important sequences start quietly, build, then finish fast and stop dead; no bounce, no wobble |
 
-The game feel comes from **state, score and stakes** (live numbers, a clear opponent, a decisive "defeat" moment), not from cartoon styling.
+The game feel comes from **state, score and stakes** (live numbers, a clear opponent, a decisive "defeat" moment), not from cartoon styling. The Procedure Ladder adds **rank**: like a dojo's dan grades, each level is earned in order.
 
 > **Rule for ambiguous decisions:** choose the option that is quieter, sharper and more precise. If two choices are equally quiet, choose the one with more space.
 
@@ -41,7 +46,7 @@ Layers get lighter as they come forward. Never skip a layer: a panel on the page
 | Token | Hex | Use |
 | --- | --- | --- |
 | `--line-1` | `#222A3A` | Default 1 px borders, dividers, table rules |
-| `--line-2` | `#34405A` | Input borders, hovered borders, chart axes |
+| `--line-2` | `#34405A` | Input borders, hovered borders, chart axes, level connector (not yet cleared) |
 | `--line-hair` | `rgba(237, 234, 227, 0.08)` | Faint grid lines, inner panel rules |
 
 ### 1.3 Text (washi paper tones)
@@ -62,11 +67,11 @@ Each accent has **one meaning**, and that meaning never changes. Count the accen
 | Token | Hex | Name | Meaning and use |
 | --- | --- | --- | --- |
 | `--accent-primary` | `#3EE6F0` | Denki (electric cyan) | The interactive colour: primary buttons, focus rings, active nav, links, selected states. "You can act here." |
-| `--accent-shu` | `#F2462E` | Shu-iro (朱, vermilion) | Stakes: STOP, DUT failure, KPI breaches, the hanko seal. "Something broke or will be destroyed." Never decorative. |
+| `--accent-shu` | `#F2462E` | Shu-iro (朱, vermilion) | Stakes: STOP, DUT failure, KPI breaches, failed ladder branches, the hanko seal. "Something broke or will be destroyed." Never decorative. |
 | `--accent-kin` | `#E8C25A` | Kin (金, gold) | Score and reward only, plus achievements later. "You earned this." |
-| `--accent-hisui` | `#4ADE9A` | Hisui (翡翠, jade) | Healthy / running / connected. DUT serving normally; game `RUNNING`. |
-| `--accent-fuji` | `#9B87F5` | Fuji (藤, wisteria) | The AI agent: agent panel, agent actions, model labels. |
-| `--accent-warn` | `#F5A524` | — | Warnings and `SIMULATED` badges only |
+| `--accent-hisui` | `#4ADE9A` | Hisui (翡翠, jade) | Healthy / passed. DUT serving normally; game `RUNNING`; branch passed; level `CLEARED`; the clear mark. |
+| `--accent-fuji` | `#9B87F5` | Fuji (藤, wisteria) | The AI agent: agent panel, agent actions, model labels, game-model labels on level cards and the Briefing. |
+| `--accent-warn` | `#F5A524` | — | Warnings: `SIMULATED` badges, "defaults to verify" badges and the injection step in a message flow (where the tester deviates from the happy path). Never used for failure. |
 
 ### 1.5 Data colours (UE slices; never used elsewhere)
 
@@ -99,10 +104,11 @@ To fill behind an accent, use the accent at a fixed opacity. Never use a new hex
    - Backgrounds take ~85% of any screen.
    - Text takes ~12%.
    - Accents take ≤ 3%.
-   - Accents are for lines, text, icons and small fills, never large solid areas. The one exception is the hanko seal on DUT failure.
-2. **Vermilion is rare.** It may appear only on the STOP button, failure states and breached KPIs. If vermilion is visible while nothing is wrong, it is a bug.
+   - Accents are for lines, text, icons and small fills, never large solid areas. The exceptions are the hanko seal on DUT failure and the clear mark on a level clear.
+2. **Vermilion is rare.** It may appear only on the STOP button, failure states, breached KPIs and failed branch rows. If vermilion is visible while nothing is wrong, it is a bug.
 3. **One primary action per view** gets a solid `--accent-primary` fill. Everything else is outline or ghost.
 4. **Never rely on colour alone.** Pair every state colour with an icon, label or shape.
+5. **Jade means passed, gold means earned.** A cleared level is jade (state); its score is gold (reward). Never swap them.
 
 ---
 
@@ -114,10 +120,10 @@ Load from Google Fonts with `font-display: swap`.
 
 | Role | Family | Weights loaded | Use |
 | --- | --- | --- | --- |
-| **Display** | **Chakra Petch** | 500, 600 | Screen titles, scores, game names, state banners, big numbers. Its squared, cut terminals carry the futuristic "kire". |
+| **Display** | **Chakra Petch** | 500, 600 | Screen titles, scores, game names, state banners, big numbers, level number badges. Its squared, cut terminals carry the futuristic "kire". |
 | **UI / body** | **Inter** | 400, 500, 600 | All interface text, paragraphs, labels, buttons |
-| **Japanese** | **Zen Kaku Gothic New** | 500, 700 | Japanese sub-labels and the hanko seal text only |
-| **Data / mono** | **JetBrains Mono** | 400, 500 | KPI values, IDs, seeds, timestamps, logs, tables of numbers |
+| **Japanese** | **Zen Kaku Gothic New** | 500, 700 | Japanese sub-labels, the hanko seal and the clear mark text only |
+| **Data / mono** | **JetBrains Mono** | 400, 500 | KPI values, IDs, seeds, timestamps, logs, tables of numbers, branch coverage, workflow references, 3GPP message names and timers |
 
 Fallback stacks:
 
@@ -134,19 +140,19 @@ The base is 14 px, chosen for engineering density. The scale ratio is ~1.25, rou
 
 | Token | Family | Size / line height | Weight | Letter spacing | Case | Use |
 | --- | --- | --- | --- | --- | --- | --- |
-| `display-xl` | Display | 56 / 64 | 600 | +0.02em | UPPER | PLAY splash, final score, "DUT DOWN" |
+| `display-xl` | Display | 56 / 64 | 600 | +0.02em | UPPER | PLAY splash, final score, "DUT DOWN", "LEVEL CLEAR" |
 | `display-l` | Display | 40 / 48 | 600 | +0.02em | UPPER | Live total score, reward value |
 | `h1` | Display | 28 / 36 | 600 | +0.04em | UPPER | Screen titles (SELECT GAME, HISTORY) |
-| `h2` | Display | 20 / 28 | 500 | +0.06em | UPPER | Panel titles (AGENT LOOP, DIAGNOSTICS) |
+| `h2` | Display | 20 / 28 | 500 | +0.06em | UPPER | Panel titles (AGENT LOOP, DIAGNOSTICS); level number badges |
 | `h3` | UI | 16 / 24 | 600 | 0 | Sentence | Card titles, dialog titles, game names on cards |
 | `body` | UI | 14 / 20 | 400 | 0 | Sentence | Paragraphs, descriptions, form values |
 | `body-strong` | UI | 14 / 20 | 600 | 0 | Sentence | Emphasis inside body; button labels |
-| `label` | UI | 11 / 16 | 600 | +0.12em | UPPER | Field labels, table headers, KPI names, tags |
-| `caption` | UI | 12 / 16 | 400 | +0.01em | Sentence | Hints, helper text, tooltips |
+| `label` | UI | 11 / 16 | 600 | +0.12em | UPPER | Field labels, table headers, KPI names, tags, lock-state badges |
+| `caption` | UI | 12 / 16 | 400 | +0.01em | Sentence | Hints, helper text, tooltips, game-model label on level cards |
 | `data-l` | Mono | 20 / 28 | 500 | 0 | — | Primary KPI values |
-| `data` | Mono | 13 / 20 | 400 | 0 | — | IDs, timestamps, table numbers, logs |
+| `data` | Mono | 13 / 20 | 400 | 0 | — | IDs, timestamps, table numbers, logs, branch coverage |
 | `jp-sub` | JP | 11 / 16 | 500 | +0.08em | — | Japanese sub-label under a heading or nav item |
-| `jp-seal` | JP | 32 / 32 | 700 | 0 | — | Kanji inside the hanko seal |
+| `jp-seal` | JP | 32 / 32 | 700 | 0 | — | Kanji inside the hanko seal and the clear mark |
 
 ### 2.3 Typography rules
 
@@ -186,6 +192,9 @@ Japanese is **atmosphere, not content**. It always sits *with* English and never
 | Stop | 停止 | teishi |
 | Game over / ended | 終了 | shūryō |
 | DUT down (failure) | 故障 | koshō |
+| Procedure Ladder | 段位 | dan'i (rank / grade) |
+| Level clear | 突破 | toppa (breakthrough) |
+| Message flow / workflow | 手順 | tejun (procedure) |
 
 ---
 
@@ -218,9 +227,14 @@ No values outside this scale. If something "needs 20 px", use 16 or 24.
 | Shell bar | 56 px | 0 24 px | Sticky |
 | Button (default) | 40 px | 0 20 px | Icon 16 px, gap 8 px |
 | Button (small) | 32 px | 0 12 px | `caption` size text |
-| Button (hero: PLAY, GENERATE) | 56 px | 0 32 px | `h2` text style |
+| Button (hero: PLAY, GENERATE, NEXT LEVEL) | 56 px | 0 32 px | `h2` text style |
 | Input / select | 40 px | 0 12 px | Label above, 8 px gap |
 | Card | — | 16 px | 24 px gap between cards |
+| Level number badge | 32 × 32 px | — | `h2` numeral, `--cut-s` chamfer, top-left of level card |
+| Level connector | 1 px line | — | Spans the 24 px gap between level cards, vertically centred on the badge |
+| Branch coverage bar | 4 px | — | Full width of the header field; `--radius-0` |
+| Message-flow row | 32 px | 0 12 px | Columns: seq (32 px, mono, `--text-2`) · direction glyph (24 px) · layer tag · message (mono, `--text-1`) · timers (mono `caption`, `--text-2`, right-aligned) |
+| Workflow reference tag | 22 px | 0 8 px | Mono 12/16, `--text-2`, 1 px `--line-2` border, `--radius-1`; no chamfer |
 | Panel | — | 24 px | Panel title → content 16 px |
 | Table row | 44 px | 0 16 px | Header row 36 px |
 | Badge | 22 px | 0 8 px | `label` style text |
@@ -233,6 +247,7 @@ No values outside this scale. If something "needs 20 px", use 16 or 24.
   - 12 columns, 24 px gutters, 24 px outer margins.
   - Content max width 1600 px, centred.
   - The Arena is full-bleed.
+  - Level cards: five in one row, each one fifth of the content width (the 24 px gutter still applies).
 - **Tablet (768–1279 px):** 8 columns, 24 px gutters, 24 px margins.
 - **Mobile (< 768 px):** 4 columns, 16 px gutters, 16 px margins.
 - **Arena split (desktop):**
@@ -247,8 +262,8 @@ No values outside this scale. If something "needs 20 px", use 16 or 24.
 | `--radius-0` | 0 | Panels, the shell bar, tables |
 | `--radius-1` | 2 px | Buttons, inputs, cards, badges, tooltips |
 | `--radius-full` | 999 px | Status dots and toggles only |
-| `--cut-s` | 6 px | Chamfer on buttons and badges |
-| `--cut-l` | 14 px | Chamfer on panels and cards that are "game objects" (game cards, agent panel, score block) |
+| `--cut-s` | 6 px | Chamfer on buttons, badges and level number badges |
+| `--cut-l` | 14 px | Chamfer on panels and cards that are "game objects" (game cards, level cards, agent panel, score block) |
 
 **The chamfer is the signature shape** (kire): a 45° cut on the **top-left and bottom-right corners only**.
 
@@ -261,7 +276,7 @@ Because `clip-path` hides box-shadow and borders, chamfered elements draw their 
 
 Use chamfers on:
 - primary and hero buttons;
-- game cards;
+- game cards and level cards;
 - the score block;
 - agent and arena panels;
 - dialogs.
@@ -315,7 +330,7 @@ The world is **ink, paper, light and glass**. Each effect is subtle; if you can 
   1. The Lobby background behind the title block (masked to fade out by 50% of the height).
   2. The inside of the hanko seal border.
   3. The Game Over background.
-- Never use it behind data, tables or text blocks.
+- Never use it behind data, tables or text blocks. The clear mark does **not** use it, so failure and clear never look alike.
 
 ### 4.5 Depth (elevation)
 
@@ -339,15 +354,21 @@ Depth comes from **layer colour plus edge light**, not big drop shadows.
 | Element | Spec |
 | --- | --- |
 | **Hanko seal** (failure) | 96 × 96 px square, rotated −6°, 3 px `--accent-shu` border, `jp-seal` text 故障 in `--accent-shu` on a 10% shu tint, with the seigaiha pattern inside the border. Stamps onto the Game Over screen. |
+| **Clear mark** (level clear) | 96 × 96 px square, **not rotated**, `--cut-l` chamfer, 2 px `--accent-hisui` border, `jp-seal` text 突破 in `--accent-hisui` on a 10% jade tint, no pattern. A check icon (Lucide `check`, 20 px) sits under the kanji. It is calm and level where the hanko is crooked and violent. |
 | **Blade line** | A 1 px horizontal line in `--accent-primary`, 48 px wide, placed under every `h1` with 12 px gap. It is the visual "cut" that starts each screen. |
 | **Corner brackets** | On the cohort arena and score block: four 12 px L-shaped corner marks in `--line-2` (HUD framing). No full border. |
 | **Status dot** | 8 px circle, solid accent, with a 2 s soft pulse ring only while `RUNNING`. |
+| **Message flow** | A quiet sequence table on `--bg-2`, hairline `--line-hair` row rules, no zebra striping. UL steps read top-down like a ladder diagram: direction glyph first, then message. The **injection step** gets a 2 px `--accent-warn` left bar and an "Injection" tag; it is the only accent in the table. Steps a branch skips (`optional`) are `--text-2`. Expanded `extends`/`ref` steps sit under a 1 px `--line-1` group rule labelled with the parent workflow ID. |
+| **Level connector** | A 1 px line joining the level number badges in order. Segments after a `CLEARED` level are `--accent-hisui`; segments before a `LOCKED` level are `--line-2` and dashed (4 px dash, 4 px gap). |
 
 ### 4.8 Iconography
 
 - Line icons from **Lucide**: 1.5 px stroke, 16 px in UI and 20 px in nav. Colour is inherited from the text colour.
-- Never use filled icons except status dots and the hanko.
-- UE and DUT sprites are custom geometric SVGs (shapes in §1.5) with no detail. They read as minimal game pieces, not cartoons.
+- Ladder icons: `lock` (LOCKED), `check` (CLEARED, branch passed), `x` (branch failed), `circle-dashed` (branch not reached).
+- Message direction glyphs (16 px, `--text-2`, always with a visually hidden label "uplink", "downlink", "simulator action", "UE event"): `arrow-up` (UL), `arrow-down` (DL), `flag` (SS), `circle` (UE). In text they are written ↑ ↓ ⚑ ●.
+- Timer marks follow the timer name in mono: `T3510 ▶` (started), `T3510 ■` (stopped).
+- Never use filled icons except status dots, the hanko and the clear mark.
+- UE, DUT and cell sprites are custom geometric SVGs (shapes in §1.5) with no detail. They read as minimal game pieces, not cartoons.
 
 ---
 
@@ -358,7 +379,7 @@ Depth comes from **layer colour plus edge light**, not big drop shadows.
 Movement is **calm, precise and decisive**. Think of a sword drawn and sheathed: almost no anticipation, a fast confident stroke, then complete stillness.
 
 - **Avoid:** bounce, overshoot, elastic springs, wobble, rotation (except the hanko stamp), and anything "cute".
-- **Interface motion** is quick and quiet. **Game motion** (score, failure, escalation) is where drama is allowed, and it follows jo-ha-kyū.
+- **Interface motion** is quick and quiet. **Game motion** (score, failure, escalation, level clear) is where drama is allowed, and it follows jo-ha-kyū.
 
 ### 5.2 Timing tokens
 
@@ -368,11 +389,11 @@ Movement is **calm, precise and decisive**. Think of a sword drawn and sheathed:
 | `--dur-fast` | 160 ms | Hover, focus, toggles, tooltips in |
 | `--dur-base` | 240 ms | Route changes, dialogs, panels expanding, cards selecting |
 | `--dur-slow` | 400 ms | Score count-up, escalation flash, staggered lists |
-| `--dur-epic` | 800 ms | PLAY splash, hanko stamp, Game Over entrance |
+| `--dur-epic` | 800 ms | PLAY splash, hanko stamp, level clear, Game Over entrance |
 
 Rules:
 - Exits are always **shorter** than entrances (~70% of the entrance duration).
-- Nothing in the interface exceeds 400 ms except the three `--dur-epic` moments.
+- Nothing in the interface exceeds 400 ms except the four `--dur-epic` moments.
 
 ### 5.3 Easing tokens
 
@@ -380,7 +401,7 @@ Rules:
 | --- | --- | --- | --- |
 | `--ease-out` | `cubic-bezier(0.16, 1, 0.3, 1)` | Fast start, long glide to rest | **Default** for everything that enters or responds to the user |
 | `--ease-in` | `cubic-bezier(0.7, 0, 0.84, 0)` | Accelerates away | Exits only |
-| `--ease-inout` | `cubic-bezier(0.65, 0, 0.35, 1)` | Even | Moving an element between two positions (tabs, sliders) |
+| `--ease-inout` | `cubic-bezier(0.65, 0, 0.35, 1)` | Even | Moving an element between two positions (tabs, sliders, tiles moving between cells) |
 | `--ease-jhk` | `cubic-bezier(0.83, 0, 0.17, 1)` | Slow, then sudden, then stop (jo-ha-kyū) | `--dur-epic` moments only |
 | `linear` | — | — | Only for continuous loops (pulse rings, progress, ticking) |
 
@@ -394,7 +415,9 @@ Hover applies only under `@media (hover: hover)`. `:focus-visible` always shows 
 | Secondary button (outline) | Border `--line-2` → `--accent-primary`; 8% cyan tint fill | `translateY(1px)` | — |
 | Ghost button / text link | **Blade sweep:** a 1 px `--accent-primary` underline grows from left to right (`scaleX 0 → 1`, origin left) | Text to `--accent-primary` | — |
 | STOP button | Border and text stay shu; 8% shu tint fill appears | `translateY(1px)` | — |
-| Game card | Border → `--accent-primary` at 60%; card lifts `translateY(-2px)`; JP sub-label fades from `--text-3` to `--text-2` | `translateY(0)` | 1 px cyan border + glow; 14% cyan tint; a 6 px cyan chamfer marker fills the top-left cut |
+| Game card / open level card | Border → `--accent-primary` at 60%; card lifts `translateY(-2px)`; JP sub-label fades from `--text-3` to `--text-2` | `translateY(0)` | 1 px cyan border + glow; 14% cyan tint; a 6 px cyan chamfer marker fills the top-left cut |
+| Cleared level card | As open level card | As open level card | As open level card; the `CLEARED` badge and check stay jade |
+| Locked level card | No lift, no border change; tooltip after 300 ms | — | Cannot be selected. Card content at 40% opacity (disabled rule); the lock icon and unlock hint stay at full `--text-2` so the reason is readable. |
 | Nav item | Text `--text-2` → `--text-1`; blade sweep underline at 40% opacity | — | Text `--text-1`; full blade underline in cyan, 2 px |
 | Table row | Fill → `--bg-3` | — | 2 px left bar in cyan |
 | Segmented control | Text → `--text-1` | — | Sliding cyan 14% tint indicator moves under the option (`--dur-base`, `--ease-inout`) |
@@ -402,7 +425,7 @@ Hover applies only under `@media (hover: hover)`. `:focus-visible` always shows 
 | Cohort tile / KPI | Tooltip after 300 ms delay; tile brightness +15% | — | — |
 | Icon button | Icon colour → `--text-1`; 8% white tint square behind | Scale 0.96 | — |
 
-- **Cursor:** `pointer` on all interactive elements; `not-allowed` on disabled.
+- **Cursor:** `pointer` on all interactive elements; `not-allowed` on disabled and locked level cards.
 - **Disabled:** 40% opacity, no hover, no glow.
 - **Focus ring:** `outline: 2px solid var(--accent-primary); outline-offset: 2px;`. It follows the chamfer using an SVG outline on chamfered elements. It is never removed.
 
@@ -416,7 +439,10 @@ Hover applies only under `@media (hover: hover)`. `:focus-visible` always shows 
 | **Score update** | Number counts up over 400 ms (`--ease-out`). The reward value flashes from gold to `--text-1` over 400 ms. No scale bump. |
 | **Escalation** | Arena corner brackets snap 4 px outward and back (240 ms). State badge switches to `ESCALATING` for 2 s. A single cyan scan line passes top-to-bottom across the arena (400 ms, linear). |
 | **KPI breach** | Value and sparkline turn shu over 160 ms. One horizontal shake of 2 px, 2 cycles, 160 ms total. |
+| **Branch passed** | The branch coverage bar extends to its new width (`scaleX`, 240 ms, `--ease-out`) and its leading edge flashes jade at 40% for 160 ms. The "Branch passed" log row fades in. No sound, no shake. |
 | **DUT failure** (`--dur-epic`, `--ease-jhk`) | Ticking stops. All sprites desaturate to 30% over 400 ms. The arena frame turns shu. The **hanko seal stamps in**: it starts 1.3× size at 0 opacity, then lands at 1× with −6° rotation in 160 ms, with a 1-frame 2 px screen offset (the "impact"). After 1.2 s it routes to Game Over. |
+| **Level clear** (`--dur-epic`, `--ease-jhk`) | Ticking stops. Sprites **keep full colour**. The arena frame turns jade. A single jade blade line cuts across the arena (jo-ha-kyū: holds faint, then crosses in 120 ms). The **clear mark** settles in: 1.15× at 0 opacity to 1× at full opacity in 240 ms, no rotation, no impact offset. After 1.2 s it routes to Game Over. |
+| **Level unlock** (Lobby, once) | On the newly opened card, the lock icon fades out (160 ms). Its connector segment draws left to right in jade (240 ms, `--ease-out`). The card border brightens to cyan 60% and returns once (240 ms). |
 | **Dialog** | Backdrop fades in 160 ms. Panel fades and scales 0.97 → 1 over 240 ms, `--ease-out`. Closing is 160 ms, `--ease-in`. |
 | **Tooltip** | 300 ms delay, then fades in and moves 4 px toward its anchor over 160 ms. Hides instantly. |
 | **Running status dot** | A pulse ring scales 1 → 2.2 and fades to 0, 2 s loop, linear. |
@@ -424,20 +450,22 @@ Hover applies only under `@media (hover: hover)`. `:focus-visible` always shows 
 ### 5.6 Reduced motion
 
 Under `@media (prefers-reduced-motion: reduce)`:
-- Every transform-based motion becomes an opacity fade of ≤ 160 ms, or is removed. This covers lifts, rises, shakes, sweeps, the splash, the scan line, the stamp and the pulse rings.
+- Every transform-based motion becomes an opacity fade of ≤ 160 ms, or is removed. This covers lifts, rises, shakes, sweeps, the splash, the scan line, the stamp, the clear mark, the coverage bar growth, connector drawing and the pulse rings.
 - The score jumps to its value.
-- The hanko simply appears.
+- The hanko and the clear mark simply appear.
 - All colour and state changes stay.
 
 ### 5.7 Performance rules
 
 - Animate only `transform`, `opacity`, `filter` (blur on enter only) and colour properties.
-- Never animate `width`, `height`, `top`, `left`, `box-shadow` size or `clip-path`. A glow appears by fading in a pseudo-element.
+- Never animate `width`, `height`, `top`, `left`, `box-shadow` size or `clip-path`. A glow appears by fading in a pseudo-element; the coverage bar and connector grow with `scaleX`.
 - Keep at most 3 concurrent CSS animations outside the Arena canvas.
 
 ---
 
 ## 6. Token summary (copy into `tokens.css`)
+
+No new tokens were needed for the Procedure Ladder; it reuses the set below.
 
 ```css
 :root {
@@ -478,7 +506,8 @@ Under `@media (prefers-reduced-motion: reduce)`:
 Run this before merging any visual change:
 
 - [ ] Every colour, size, gap, radius, duration and easing comes from a token.
-- [ ] Vermilion appears only for stop, failure or breach.
+- [ ] Vermilion appears only for stop, failure, breach or a failed branch.
+- [ ] Jade marks passed/cleared state; gold marks score and reward. They are never swapped.
 - [ ] Only one solid primary button is visible in the view.
 - [ ] Live numbers use mono with tabular numerals.
 - [ ] Uppercase text is tracked as specified.
@@ -486,4 +515,7 @@ Run this before merging any visual change:
 - [ ] No bounce or overshoot. Exits are faster than entrances.
 - [ ] Reduced-motion behaviour is defined.
 - [ ] Text contrast is ≥ 4.5:1, and `--text-3` isn't used for anything essential.
+- [ ] Locked states are readable: the lock icon and unlock hint are never faded below `--text-2`.
+- [ ] 3GPP message names, workflow IDs and timers are mono and spelled exactly as in the workflow library.
+- [ ] Amber marks the tester's injection or a value to verify, never a failure; failure stays vermilion.
 - [ ] The change still looks right on mobile (grain off, type steps down, 44 px tap targets).

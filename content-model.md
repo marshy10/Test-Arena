@@ -1,18 +1,23 @@
 # Test Arena — Content Model (Must-Have / MVP)
 
-*Companion to the Anritsu AI-RAN Test Arena PRD · 29 Oct 2026*
+*Companion to the Anritsu AI-RAN Test Arena PRD v1.2 · 2 Nov 2026*
+
+> **Change log**
+> - **2 Nov 2026 (v1.2):** Ladder content now comes from the signalling workflow library (M11): workflow IDs on every branch, a message-flow view on the Briefing, message narration in the Arena, workflow steps in failure reports, Level 5 (IMS Voice & Video), a Workflow library panel in Settings, three emulated cells, and gaps G17–G20.
+> - **2 Nov 2026:** Added Procedure Ladder content (M10): Lobby mode and level cards, game model and branch set on the Briefing, per-game KPI sets, branch coverage in the Arena, `LEVEL CLEAR` outcome, and gaps G13–G16.
+> - **29 Oct 2026:** First release.
 
 ## Page order
 
-The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–M9 and to nothing else.
+The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–M11 and to nothing else.
 
 0. **App shell**: persistent top bar on all screens
-1. **Game Lobby**: choose target, feature and difficulty (M1)
-2. **Testcase Briefing**: review the generated testcase before Play (M2)
-3. **Live Arena**: cohort, DUT, agent loop and diagnostics strip (M3–M7)
-4. **Game Over**: failure report and log capture (M3, M7)
+1. **Game Lobby**: choose mode, target, game or ladder level, and difficulty (M1, M10)
+2. **Testcase Briefing**: review the generated testcase and its message flows before Play (M2, M10, M11)
+3. **Live Arena**: cohort, DUT, agent loop and diagnostics strip (M3–M7, M10)
+4. **Game Over**: failure, stop or level-clear report and log capture (M3, M7, M10)
 5. **Run History**: saved games and replay (M9)
-6. **Instrument Settings**: adapter connection (M8)
+6. **Instrument Settings**: adapter connection and workflow library (M8, M11)
 
 ### Shared rules for every field
 
@@ -22,6 +27,9 @@ The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–
 - **Numbers** always carry a unit. KPIs use JetBrains Mono with fixed decimals.
 - **Timestamps** are stored as ISO 8601. They display as `HH:MM:SS` in the arena and `DD MMM YYYY HH:MM` in history, in local time.
 - **Identifiers** (IMSI/SUPI) are masked to the last 4 digits wherever they are shown.
+- **Game names.** Stress games use their name ("Signalling Storm"). Ladder levels use `L<n> <Procedure>` ("L1 Registration", "L5 IMS Call") wherever space is tight, and "Level 1 · Registration" / "Level 5 · IMS Voice & Video" elsewhere.
+- **Workflow references.** Written as the workflow ID plus case, variant or cause, separated by " · ": `WF-07 · #22`, `WF-08a`, `WF-12c`. Shown in JetBrains Mono. Never invent an ID; tester-defined branches show `—`.
+- **Message names** are copied exactly from the library (`REGISTRATION REQUEST`, `RRCSetupRequest`, `486 Busy Here`), never reworded. Direction is shown as UL ↑, DL ↓, SS ⚑ or UE ●.
 
 ---
 
@@ -34,33 +42,46 @@ The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–
 | Adapter status | Badge | Connection to instrument | Enum: `LIVE` / `SIMULATED` / `OFFLINE`; always visible |
 | Active game indicator | Badge | Game ID + elapsed time when a game runs | `PLAY 042 · 01:23:45`; links to Arena |
 
-## 1. Game Lobby (M1)
+## 1. Game Lobby (M1, M10)
 
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
 | Screen title | Arcade | "SELECT GAME" | ≤ 3 words, uppercase |
+| Mode | Toggle | Which kind of game | Enum: `Stress games`, `Procedure Ladder`; default Stress games |
 | Target type | Toggle | What is being stressed | Enum: `gNB / AI-RAN`, `Modem`; required |
-| DUT label | Text input | Name + build of the device, e.g. "gNB-X sw 4.2.1" | Required, ≤ 40 chars; saved with every run |
-| Feature under test | Card picker | One card per stress game | Enum (4): Signalling Storm, Retry Loop, Small-Packet Flood, GBR Squeeze; single select |
-| Game card · description | Text | What the game does to the DUT | ≤ 90 chars, instrument tone, starts with a verb ("Floods RACH with…") |
-| Game card · KPIs attacked | Tags | KPIs this game pressures | 2–3 tags from the Diagnostics strip KPI list |
+| DUT label | Text input | Name + build of the device, e.g. "gNB-X sw 4.2.1" | Required, ≤ 40 chars; saved with every run; ladder unlocks are tracked per DUT label |
+| Feature under test (Stress mode) | Card picker | One card per stress game | Enum (4): Signalling Storm, Retry Loop, Small-Packet Flood, GBR Squeeze; single select |
+| Ladder level (Ladder mode) | Card picker, ordered 1→5 | One card per level, joined by a connector line | Enum (5): L1 Registration, L2 Data Call, L3 Handover & Mobility, L4 Throughput, L5 IMS Voice & Video; single select; locked levels not selectable |
+| Card · description | Text | What the game does to the DUT | ≤ 90 chars, instrument tone, starts with a verb ("Floods RACH with…", "Breaks the registration tree at…") |
+| Card · KPIs attacked | Tags | KPIs this game pressures | 2–3 tags from that game's own KPI set |
+| Level card · game model | Text | The level's game-theory model | ≤ 30 chars: "Sequential game", "Coordination game", "Stackelberg game", "Congestion game", "Bargaining game" |
+| Level card · workflows | Mono tags | Library workflows the level plays | 1–4 IDs, e.g. `WF-05` `WF-06` `WF-11` `WF-12`; L4 shows `WF-01` |
+| Level card · lock state | Badge + icon | Whether the level can be played | Enum: `LOCKED` / `OPEN` / `CLEARED`; locked cards show "Clear L<n−1> to unlock" (≤ 30 chars) |
 | Difficulty | Segmented control | Stress intensity | Enum: Easy / Normal / Hard / Brutal; default Normal |
-| Difficulty hint | Text | What the level means in numbers | ≤ 60 chars, e.g. "10K UEs · 2× burst rate" |
-| Primary action | Button | Generates the testcase | Label "GENERATE"; disabled until target, DUT label and feature are set |
+| Difficulty hint | Text | What the level means in numbers | ≤ 60 chars, e.g. "10K UEs · 2× burst rate" or "Baseline + 3 branches · 100 UEs" |
+| Primary action | Button | Generates the testcase | Label "GENERATE"; disabled until target, DUT label and a game or open level are set |
 
-## 2. Testcase Briefing (M2)
+## 2. Testcase Briefing (M2, M10)
 
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
 | Testcase ID | Mono text | Unique ID for replay | Format `TC-YYYYMMDD-NNNN`; read-only |
 | Summary | Text | One-line description of the generated sequence | ≤ 120 chars, instrument tone |
+| Game model | Text | The game-theory model the agent uses | ≤ 40 chars, e.g. "Stackelberg · leader–follower" (stress games) or "Sequential game · subgame perfection" (L1) |
+| Model explainer | Text | What the model means for this test | ≤ 140 chars, instrument tone; one per game, from the PRD catalogue |
+| Branch set (Ladder only) | Ordered list | Branches the agent must cover to clear the level | 4–18 items; name ≤ 40 chars; each row shows its workflow reference (`WF-07 · #22`, or `—` if tester-defined); count depends on difficulty; one row is selected (baseline by default) |
+| Message flow (Ladder only) | Step list | The selected branch's workflow steps | Up to 40 steps; per step: seq, direction, layer, message (≤ 48 chars), container (≤ 40 chars, optional), timers started/stopped (`T3510 ▶`, `T3510 ■`); the step where the tester deviates (SS action or injected cause) is marked "Injection"; `optional` steps shown in `--text-2` |
+| Expected behaviour (Ladder only) | Text | What the DUT must do for the selected branch to pass | ≤ 160 chars, copied from the workflow's `passCriteria` or `expectedUE` |
+| Spec baseline | Text | Specs the workflow library is baselined on | ≤ 100 chars, e.g. "TS 38.508-1 · 38.331 · 24.501 · 24.229 · 38.523-1" |
+| Defaults to verify | Badge + count | Library fields marked `verify: true` used by this testcase | Integer; warning badge when > 0, e.g. "6 defaults to verify" |
+| Clear rule (Ladder only) | Text | What clears the level | ≤ 80 chars, e.g. "Pass all 7 branches with no DUT failure, min 05:00" |
 | Cohort mix | 3 numbers + bar | UE counts per slice | URLLC / eMBB / mMTC; integers; total ≤ 60,000 |
 | Source captures | List | Datalake captures used to seed the testcase | 1–5 items: capture ID, location, date; no subscriber IDs |
-| Stop conditions | List | What ends the game | Always "User Stop" + the game's failure rules (see G1) |
+| Stop conditions | List | What ends the game | Always "User Stop" + the game's failure rules (see G1); ladder levels add "Level clear" |
 | Generation time | Mono number | Proof of the < 2 s target | Seconds, 2 decimals |
 | Actions | Buttons | Start or go back | "PLAY" (primary), "Regenerate", "Back" |
 
-## 3. Live Arena (M3–M7)
+## 3. Live Arena (M3–M7, M10)
 
 The screen has four zones. All live values update at 10–20 Hz.
 
@@ -69,10 +90,12 @@ The screen has four zones. All live values update at 10–20 Hz.
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
 | Game ID | Arcade | e.g. "PLAY 042" | Zero-padded, 3+ digits |
-| Game name + difficulty | Text | e.g. "Signalling Storm · Hard" | From Lobby; read-only |
+| Game name + difficulty | Text | e.g. "Signalling Storm · Hard" or "Level 1 · Registration · Hard" | From Lobby; read-only |
 | DUT label | Text | Device being tested | From Lobby; ≤ 40 chars |
 | Elapsed time | Mono | Time since Play | `HH:MM:SS`, counts up, no upper limit |
-| Game state | Badge | Current state | Enum: `RUNNING` / `ESCALATING` / `STOPPED` / `DUT DOWN` |
+| Branch coverage (Ladder only) | Mono + bar | Branches passed so far | `n / N` and %, integer; bar fills as branches pass |
+| Workflow step (Ladder only) | Mono | Position in the current branch's workflow | `WF-11 · step 4 / 10` |
+| Game state | Badge | Current state | Enum: `RUNNING` / `ESCALATING` / `STOPPED` / `DUT DOWN` / `CLEARED` |
 | Stop control | Button | Ends the game | Label "STOP"; one confirm: "Stop game and save run?" |
 
 ### 3b. Cohort arena (canvas)
@@ -81,22 +104,35 @@ The screen has four zones. All live values update at 10–20 Hz.
 | --- | --- | --- | --- |
 | Cohort tiles | Sprite grid | Aggregated UE groups, not single UEs | ≤ 48 tiles; each = slice + count; shape differs per slice |
 | Slice counts | Mono numbers | Active UEs per slice | URLLC / eMBB / mMTC; integers |
-| Current move | Text | Stress move the leader is playing | Enum from game; ≤ 30 chars, e.g. "RACH burst ×4" |
+| Current move | Text | Stress move or ladder branch the leader is playing | Enum from game; ≤ 30 chars, e.g. "RACH burst ×4" or "REJECT #22 + T3346", with its workflow reference beneath in mono |
 | DUT status | Icon + text | gNB tower or modem sprite with state | Enum: `Serving` / `Barring` / `Rejecting` / `Down` |
+| Cells (L3 only) | Sprite ×3 | The library's three NR cells, with the UE cohort moving between them | Labels "Cell 1", "Cell 2" (TAC 000001) and "Cell 3" (TAC 000002); Cell 3 is used by WF-05c and WF-06b |
 | Legend | Fixed | URLLC · eMBB · mMTC · NETWORK | Static; colour + shape |
 
 ### 3c. Agent loop panel
 
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
-| State | 3 mono values | RACH attempts, PRB utilisation, rejects | Units: /s, %, /s |
+| State | 3 mono values | The game's three state inputs | Stress games: RACH attempts, PRB utilisation, rejects (/s, %, /s). Ladder: defined per level in `DATA.ladder` (see table below) |
 | Reward | Arcade number | Current reward from QoS | Signed, 2 decimals, e.g. "+12.75"; yellow only |
-| Reward breakdown | Text | Components driving reward | Reject · Latency · Drop, each signed, 2 decimals |
-| Action | Text | Agent's last chosen move | ≤ 30 chars; same vocabulary as "Current move" |
-| Agent | Text | Algorithm + version | e.g. "DQN v0.3 · Stackelberg"; read-only |
+| Reward breakdown | Text | Components driving reward | 3 components per game (stress: Reject · Latency · Drop), each signed, 2 decimals |
+| Action | Text | Agent's last chosen move or branch | ≤ 30 chars; same vocabulary as "Current move" |
+| Agent | Text | Algorithm + game model | e.g. "DQN v0.3 · Stackelberg" or "DQN v0.3 · Sequential"; read-only |
 | Total score | Arcade number | Cumulative score this game | Integer, counts up |
 
+**Agent state inputs per ladder level**
+
+| Level | State values (units) | Reward components |
+| --- | --- | --- |
+| L1 Registration | Attempts (/s), Rejects (/s), Timeouts (/s) | Wrong recovery · Latency · Hang |
+| L2 Data Call | Session requests (/s), Fallbacks (/s), Session rejects (/s) | Miscoordination · Latency · Drop |
+| L3 Handover | HO attempts (/min), Ping-pongs (/min), RLF (/min) | HO failure · Interruption · Drop |
+| L4 Throughput | Active UEs, PRB utilisation (%), BLER (%) | Throughput gap · Unfairness · BLER |
+| L5 IMS Voice & Video | Call attempts (/s), SIP errors (/s), QoS flow failures (/min) | Failed call · Setup time · Drop |
+
 ### 3d. Diagnostics strip (always visible)
+
+The strip always shows five KPIs. Stress games use the standard five below; each ladder level uses its own five.
 
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
@@ -106,31 +142,43 @@ The screen has four zones. All live values update at 10–20 Hz.
 | Latency | Mono + sparkline | User-plane latency, p95 | ms, 1 decimal |
 | Drops | Mono + sparkline | Dropped sessions | Per second, integer |
 | Threshold marker | Line | Failure threshold per KPI | Turns red when crossed; values TBD (see G1) |
-| Event log | Scrolling list | Last 20 events | `HH:MM:SS` + ≤ 80-char message; IMSI masked |
+| Event log | Scrolling list | Last 20 events | `HH:MM:SS` + ≤ 80-char message; IMSI masked; ladder adds "Branch passed: …" events and narrates workflow steps, e.g. "↑ UL 5GMM REGISTRATION REQUEST · T3510 ▶" |
 
-## 4. Game Over (M3, M7)
+**Ladder KPI sets** (same format rules: mono + 60 s sparkline + threshold marker)
 
-This screen appears when the DUT fails or the user stops the game. Only the banner differs between the two cases; the rest of the report is the same.
+| Level | KPI 1 | KPI 2 | KPI 3 | KPI 4 | KPI 5 |
+| --- | --- | --- | --- | --- | --- |
+| L1 Registration | Registration success (%, 1 dp) | Registration latency (ms, 1 dp) | Retries (/s, int) | Rejects (/s, int) | Timeouts (/s, int) |
+| L2 Data Call | Session setup success (%, 1 dp) | Setup latency (ms, 1 dp) | Fallbacks (/s, int) | Session rejects (/s, int) | Session drops (/s, int) |
+| L3 Handover | HO success (%, 1 dp) | Interruption (ms, 1 dp) | Ping-pong rate (%, 1 dp) | RLF (/min, int) | Session drops (/s, int) |
+| L4 Throughput | Cell throughput (Mbps, 1 dp) | Per-UE p5 (Mbps, 1 dp) | Fairness (Jain, 0–1, 2 dp) | BLER (%, 1 dp) | PRB utilisation (%, 1 dp) |
+| L5 IMS Voice & Video | Call setup success (%, 1 dp) | Call setup time (ms, 1 dp) | QoS flow failures (/min, int) | SIP errors (/s, int) | Call drops (/min, int) |
+
+## 4. Game Over (M3, M7, M10)
+
+This screen appears when the DUT fails, the user stops the game, or a ladder level is cleared. Only the banner and actions differ between the cases; the rest of the report is the same.
 
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
-| Banner | Arcade | Outcome | Enum: "DUT DOWN" (red) / "GAME STOPPED" (green) |
-| Failure reason | Text | What broke | ≤ 100 chars, instrument tone, names the KPI or event, e.g. "gNB crash after RRC setup storm" |
-| Time to failure | Mono | Elapsed time at failure | `HH:MM:SS` |
+| Banner | Arcade | Outcome | Enum: "DUT DOWN" (red) / "GAME STOPPED" (green) / "LEVEL CLEAR" (green) |
+| Failure reason | Text | What broke | ≤ 100 chars, instrument tone, names the KPI or event, e.g. "gNB crash after RRC setup storm". On a ladder level it names the workflow step, e.g. "WF-11 step 4: no RRCReestablishmentRequest before T311". For a clear: "All 7 branches passed". |
+| Time to failure | Mono | Elapsed time at end | `HH:MM:SS` |
 | Final score | Arcade number | Total score | Integer |
-| Triggering moves | Ordered list | Last 5 moves before failure | Move + timestamp, oldest first |
-| KPI snapshot | Table | All 5 KPIs at failure vs threshold | Same units as Diagnostics strip |
+| Branch results (Ladder only) | Table | Each branch with pass / fail / not reached | Branch name + workflow reference + result + time first passed; a failed row adds the step reached and the expected behaviour (≤ 160 chars) |
+| Unlock notice (Ladder clear only) | Text | What is now open | ≤ 60 chars, e.g. "Level 2 · Data Call unlocked for gNB-X sw 4.2.1" |
+| Triggering moves | Ordered list | Last 5 moves before the end | Move + timestamp, oldest first |
+| KPI snapshot | Table | All 5 KPIs at the end vs threshold | Same KPI set and units as that game's Diagnostics strip |
 | Log capture | File link | Logs + game state for the last N seconds | Default N = 30 s; download as .zip; IMSI masked |
 | Replay seed | Mono | Seed + agent version for exact replay | Copyable |
-| Actions | Buttons | Next step | "REPLAY", "New game", "View in History" |
+| Actions | Buttons | Next step | Default: "REPLAY", "New game", "View in History". After a level clear: "NEXT LEVEL" (primary), "Replay", "View in History"; after clearing L5: "New game" replaces "NEXT LEVEL". |
 
 ## 5. Run History (M9)
 
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
-| Run list · columns | Table | One row per game | Date, Game ID, DUT label, Game, Difficulty, Duration, Outcome, Score |
-| Outcome | Badge | How the game ended | Enum: `DUT DOWN` / `STOPPED` / `PLATFORM ERROR` |
-| Filters | Controls | Narrow the list | DUT label, Game, Outcome, date range |
+| Run list · columns | Table | One row per game | Date, Game ID, DUT label, Game, Difficulty, Duration, Outcome, Score. Ladder runs show Game as "L1 Registration". |
+| Outcome | Badge | How the game ended | Enum: `DUT DOWN` / `STOPPED` / `LEVEL CLEAR` / `PLATFORM ERROR` |
+| Filters | Controls | Narrow the list | DUT label, Game (stress games + five ladder levels), Outcome, date range |
 | Run detail · score timeline | Line chart | Score over the game | x = elapsed time, y = score |
 | Run detail · report | Link | Opens the Game Over report | Same fields as screen 4 |
 | Empty state | Text | Shown before first run | ≤ 60 chars, e.g. "No games yet. Pick one in the Lobby." |
@@ -144,25 +192,36 @@ This screen appears when the DUT fails or the user stops the game. Only the bann
 | Interface | Select | Connection type | Enum: Ethernet/SCPI, GPIB, USB |
 | Test connection | Button + result | Checks reachability | Result: OK / error text ≤ 80 chars |
 | Max UEs available | Mono (read-only) | Licence/hardware limit | Integer ≤ 60,000; caps the Lobby |
+| Emulated cells | Mono (read-only) | Cells available for Level 3 | Integer; 3 required for L3 (two in one TA, one in a second TA) |
+| Workflow library | Panel | The loaded `5g_signalling_workflows.json` | Schema name + version (`test-arena.signalling-workflows` 1.0.0), technology, generated date, workflow count (12), spec baseline (≤ 100 chars), fields to verify (29) |
 | Datalake source | Text input | Endpoint for field captures | URL; read-only access only |
+| Ladder unlocks | Toggle | How ladder levels open | Enum: `Progressive` (default) / `All unlocked (demo)` |
 
 ---
 
 ## Gaps between the PRD and the content model
 
-Four gaps (G1–G4) block MVP content. The rest can be settled during the build.
+Four gaps (G1–G4) and the new G13 block MVP content. The rest can be settled during the build.
 
 | # | Gap | Where it bites | Fix in PRD | Blocks MVP? |
 | --- | --- | --- | --- | --- |
-| G1 | **Failure rules are undefined.** The PRD says "crash, KPI breach, assert" but gives no per-game thresholds. | Stop conditions, threshold markers, Failure reason | Add a per-game failure table (KPI, threshold, duration) | Yes |
-| G2 | **The score and reward formula is undefined.** No weights are set for reject, latency or drop. | Reward, Reward breakdown, Total score | Define the reward function and score scale | Yes |
-| G3 | **Difficulty levels have no parameters.** | Difficulty hint, Cohort mix | Map each level to UE count, burst rate and move set | Yes |
+| G1 | **Failure rules are undefined.** The PRD says "crash, KPI breach, assert" but gives no per-game thresholds. This now includes the five ladder KPI sets. | Stop conditions, threshold markers, Failure reason | Add a per-game failure table (KPI, threshold, duration) | Yes |
+| G2 | **The score and reward formula is undefined.** No weights are set for reject, latency or drop, or for the ladder reward components. | Reward, Reward breakdown, Total score | Define the reward function and score scale per game | Yes |
+| G3 | **Difficulty levels have no parameters.** For ladder levels this includes the branch-set size per difficulty. | Difficulty hint, Cohort mix, Branch set | Map each level to UE count, burst rate, move set and branch count | Yes |
 | G4 | **The datalake schema is unknown.** This is already an open question in the PRD. | Source captures, Datalake source | Confirm capture ID, metadata and access method | Yes |
 | G5 | **The PRD has no DUT identity**, but history and replay need one. | DUT label (added to Lobby) | Add a DUT label/build field to M1 | No (added here) |
 | G6 | **Mock vs real mode isn't visible to users.** The PRD ships a mock adapter but has no rule for showing it. | Adapter status badge | Require a `SIMULATED` badge whenever mock is active | No (added here) |
 | G7 | **Copy tone isn't specified.** The Design Standard covers visuals only. | All text fields | Adopt the two-register rule (Arcade / Instrument) above | No |
-| G8 | **KPI units and definitions are not stated** (e.g. latency p50 vs p95). | Diagnostics strip, KPI snapshot | Add a KPI glossary with units | No |
+| G8 | **KPI units and definitions are not stated** (e.g. latency p50 vs p95). | Diagnostics strip, KPI snapshot | Add a KPI glossary with units, covering the ladder KPIs (e.g. Jain's fairness index) | No |
 | G9 | **There are no users or auth**, so Run History can't show who ran a game. | Run list | Decide: single-user lab tool for MVP, or add a user field | No |
 | G10 | **The log capture window isn't set.** | Log capture | Confirm N (30 s assumed) | No |
 | G11 | **Hot-add (S1) is core to the vibe but out of MVP scope**, so there is no "CONTINUE?" content here. | Live Arena | Keep as Should-Have; reserve space in the arena layout | No |
 | G12 | **Platform errors aren't covered.** The PRD only defines user Stop and DUT failure. | Outcome enum (`PLATFORM ERROR` added) | Add a third stop condition so tool faults are never blamed on the DUT | No (added here) |
+| G13 | **The level-clear rule needs numbers.** The PRD sets 100% branch coverage but leaves the minimum run time open. | Clear rule, Branch coverage, `CLEARED` state | Set the minimum run time per level and difficulty | Yes |
+| G14 | **Unlock persistence is undefined.** Should a clear carry over to a new DUT build, and does it expire? | Level card lock state, Unlock notice | Decide unlock scope (assumed: per exact DUT label, no expiry) | No (assumption used) |
+| G15 | **Level 3 needs multi-cell emulation**, which the PRD lists as an open question. | Cells (L3), Emulated cells | Confirm simulator support for ≥ 2 cells | No (mock emulates 2) |
+| G16 | **Tournament mode (S8) is out of MVP scope**, so there is no chained-run content here. | Lobby, Game Over | Keep as Should-Have; "NEXT LEVEL" is the manual equivalent for MVP | No |
+| G17 | **Workflow coverage gaps.** The library has no successful-registration workflow (L1 baseline), no PDU-session negotiation workflows (parked L2 branches) and no throughput workflows (L4). | L1 branch 1, L2, L4 branch sets | Add the workflows to the library; until then L1 branch 1 is built from WF-07 steps 1–4 + ACCEPT and L4 branches show `—` | No (marked in UI) |
+| G18 | **29 library fields are marked `verify: true`.** Their values depend on the TS 38.508-1 release and PIXIT/ICS. | Defaults to verify badge, Message flow | Confirm the 38.508-1 baseline per customer; clear the flags in the library | No (warning shown) |
+| G19 | **Library ownership and versioning are undefined.** | Settings · Workflow library | Name an owner, a release process and a compatibility rule for `schemaVersion` | No |
+| G20 | **Cohort fan-out of single-UE workflows is unspecified** (stagger, identities, per-UE judging, log volume). | Arena KPIs, Event log | Define the fan-out rule; the static build narrates one representative UE | No (assumption used) |
