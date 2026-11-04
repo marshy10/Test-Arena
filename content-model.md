@@ -3,6 +3,9 @@
 *Companion to the Anritsu AI-RAN Test Arena PRD v1.2 · 2 Nov 2026*
 
 > **Change log**
+> - **4 Nov 2026 (v1.5):** Workflow library v3 (schema 3.0.0): NAS messages are library steps with their own decode (NAS library: TS 24.501 clause, IE table, absent IEs, security header, protected PDU, TS 24.301 equivalent); RRC steps name the NAS they carry; Settings lists the 5GS↔EPS timer and interworking tables; branch sets grow to L1 19, L2 14, L3 12, L5 15.
+> - **3 Nov 2026 (v1.4):** Workflow library v2 (schema 2.0.0): message flows include PHY/MAC steps with a Signalling / All layers toggle; trace rows carry SFN/slot; the inspector decodes DCI, PDSCH/PUSCH/PUCCH/PRACH, MAC PDUs, RRC ASN.1 (UPER hex, IE tree, absent IEs), NAS PDUs and SIP; a PHY · MAC filter; IMSI masked in hex; 10 verification areas.
+> - **2 Nov 2026 (v1.3):** Added the signalling trace (Arena tab and Game Over section): ladder-diagram rows, IE inspector and DUT response verdicts.
 > - **2 Nov 2026 (v1.2):** Ladder content now comes from the signalling workflow library (M11): workflow IDs on every branch, a message-flow view on the Briefing, message narration in the Arena, workflow steps in failure reports, Level 5 (IMS Voice & Video), a Workflow library panel in Settings, three emulated cells, and gaps G17–G20.
 > - **2 Nov 2026:** Added Procedure Ladder content (M10): Lobby mode and level cards, game model and branch set on the Briefing, per-game KPI sets, branch coverage in the Arena, `LEVEL CLEAR` outcome, and gaps G13–G16.
 > - **29 Oct 2026:** First release.
@@ -70,10 +73,10 @@ The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–
 | Game model | Text | The game-theory model the agent uses | ≤ 40 chars, e.g. "Stackelberg · leader–follower" (stress games) or "Sequential game · subgame perfection" (L1) |
 | Model explainer | Text | What the model means for this test | ≤ 140 chars, instrument tone; one per game, from the PRD catalogue |
 | Branch set (Ladder only) | Ordered list | Branches the agent must cover to clear the level | 4–18 items; name ≤ 40 chars; each row shows its workflow reference (`WF-07 · #22`, or `—` if tester-defined); count depends on difficulty; one row is selected (baseline by default) |
-| Message flow (Ladder only) | Step list | The selected branch's workflow steps | Up to 40 steps; per step: seq, direction, layer, message (≤ 48 chars), container (≤ 40 chars, optional), timers started/stopped (`T3510 ▶`, `T3510 ■`); the step where the tester deviates (SS action or injected cause) is marked "Injection"; `optional` steps shown in `--text-2` |
-| Expected behaviour (Ladder only) | Text | What the DUT must do for the selected branch to pass | ≤ 160 chars, copied from the workflow's `passCriteria` or `expectedUE` |
-| Spec baseline | Text | Specs the workflow library is baselined on | ≤ 100 chars, e.g. "TS 38.508-1 · 38.331 · 24.501 · 24.229 · 38.523-1" |
-| Defaults to verify | Badge + count | Library fields marked `verify: true` used by this testcase | Integer; warning badge when > 0, e.g. "6 defaults to verify" |
+| Message flow (Ladder only) | Step list + toggle | The selected branch's workflow steps | 5–155 steps (initial registration 129, VoNR 141); toggle "Signalling (n)" (default: RRC, NAS, SIP, UE events, test-system actions) / "All layers (n)" (adds DCI, PDSCH/PUSCH, HARQ-ACK, SR, PRACH, gNB decode); per step: seq, direction, layer, message (≤ 56 chars), container for NAS steps (≤ 48 chars, e.g. "RRCSetupComplete.dedicatedNAS-Message", "DL NAS TRANSPORT Payload container in RRCReconfiguration"), note, timers (`T3510 ▶` start, `■` stop, `✕` expired, `…` running); the injection step is marked "Injection"; tags "Adapted" (value differs from the library message), "Response matrix", "Composed" (flow joined from library flows, with a "from WF-xx" rule at each join; only L5 "RLF during active call") |
+| Expected behaviour (Ladder only) | Text | What the DUT must do for the selected branch to pass | ≤ 200 chars, from the library in this order: matrix row `expectedUE`; the injection step's `expect`; the next UE-event step (timer expiry first); the next UL NAS summary; `passCriteria` |
+| Spec baseline | Text | Specs the workflow library is baselined on | Every TS number in `specBaseline`, e.g. "TS 38.331 · 38.508-1 · 38.212 · 38.321 · 38.213 · 38.214 · 38.211 · 24.501 · 24.229 · 34.229-1" |
+| Defaults to verify | Badge + count | Configuration areas in the library's `defaults.verify` | Integer; warning badge when > 0, e.g. "10 defaults to verify"; tooltip lists the first 3 |
 | Clear rule (Ladder only) | Text | What clears the level | ≤ 80 chars, e.g. "Pass all 7 branches with no DUT failure, min 05:00" |
 | Cohort mix | 3 numbers + bar | UE counts per slice | URLLC / eMBB / mMTC; integers; total ≤ 60,000 |
 | Source captures | List | Datalake captures used to seed the testcase | 1–5 items: capture ID, location, date; no subscriber IDs |
@@ -130,6 +133,27 @@ The screen has four zones. All live values update at 10–20 Hz.
 | L4 Throughput | Active UEs, PRB utilisation (%), BLER (%) | Throughput gap · Unfairness · BLER |
 | L5 IMS Voice & Video | Call attempts (/s), SIP errors (/s), QoS flow failures (/min) | Failed call · Setup time · Drop |
 
+### 3c-bis. Signalling trace (tab beside the agent loop)
+
+| Field | Format | Description | Constraints |
+| --- | --- | --- | --- |
+| Tabs | Tab pair | "Agent loop" / "Signalling trace" | One selected |
+| Summary | Text | Counts for this game | "n messages (n PHY/MAC) · n DUT responses · n as expected · n late · n wrong or missing" |
+| Filters | Toggles | "PHY · MAC" (on by default; off hides DCI, PDSCH/PUSCH, HARQ-ACK, SR, PRACH and gNB decode rows), "DUT responses only", "Live" (follow newest) | Selecting a row turns Live off; in Live the inspector updates at most about twice a second |
+| Lane header | Labels | UE · gNB · 5GC · IMS, DUT lane emphasised | Caption names the DUT, e.g. "gNB is the DUT · UE simulated · 5GC and IMS emulated" |
+| Trace row | Row | One message | Time `+MM:SS.s`; arrow between lanes; message name (exact library spelling); meta "layer · channel · in container · SFN s.slot · workflow #step"; PHY/MAC rows in caption size with a dotted arrow; gNB decode shown as a square on the gNB lane; sender ("UE sim", "5GC emu", "gNB sim", "Test system") or DUT verdict ("DUT 12.4 ms", "DUT late", "DUT sent RRCReject", "DUT no response") |
+| Inspector · details | Key–value | Direction (DUT tagged), layer and channel, container, time (SFN · slot · ms), workflow, step and library source (e.g. `WF-07a#24`), move, timers, representative UE | 5G-S-TMSI masked to last 4 |
+| Inspector · DUT response | Key–value | Verdict, expected, actual, latency (library SFN/slot gap × load; late = 3×, with the expected value), "must do" from the workflow | When the DUT sent RRCReject instead of RRCSetup, the library's RRCReject ASN.1 is shown |
+| Inspector · DCI | Key–value + table | PDCCH: RNTI type/value, search space, CORESET, aggregation level, CCE, payload bits + CRC, payload hex; one row per field: name · bits · value · meaning | 0-bit fields listed underneath |
+| Inspector · PHY | Key–value | PDSCH / PUSCH (PRBs, MCS, TBS, RV, HARQ process, NDI, symbols, K2, DMRS), PUCCH (format, resource, K1, HARQ process, codebook, counter DAI, HARQ-ACK bits, or SR fields), PRACH, SS/PBCH | Values as in the library |
+| Inspector · MAC PDU | Hex + tree | MAC PDU hex and its subPDUs (subheaders, RAR with 27-bit UL grant, CCCH SDU, BSR) | Hex grouped in bytes with Copy |
+| Inspector · RRC ASN.1 | Hex + tree | ASN.1 type, UPER length, `messageLibrary` reference, UPER hex, decoded IE tree; single-child envelopes folded into one path (message › c1 › rrcSetup › …); "Absent (OPTIONAL)" and "Absent (extensions)" lines at every level; contained IEs (CellGroupConfig, NAS) decoded below | Large sub-trees start collapsed |
+| Inspector · NAS PDU | Key–value + hex + table | Message with TS 24.501 clause, procedure, decoded summary, TS 24.301 equivalent, carried-in container, `nasLibrary` reference and length; plain PDU hex; IE table (IE · IEI · length · value tree); "Absent (OPTIONAL)" list; contained messages; NAS security block (security header type, MAC placeholder, sequence number, NAS COUNT, ciphering) with the protected PDU hex as carried | A played cause-matrix row shows a "Cause matrix" tag, its hex, and a note that the IE table is the library's own message; adapted PDUs (#21) show an amber "Adapted" tag; IMSI/SUPI digits masked except the last 4 in hex, IE values and summaries |
+| Inspector · Carries NAS | Text | On an RRC step that carries NAS: the NAS message names and where their row is | — |
+| Inspector · SIP | Key–value + block | Headers and SDP lines, size in bytes | IMSI-based IMPU masked |
+| Inspector · Annotation | Text | Step note, library note, "Adapted: …" (amber) | — |
+| Buffer | — | Live trace length | Last 600 messages kept; last 260 rows rendered; 220 saved per run (trace kept for the 10 newest saved runs) |
+
 ### 3d. Diagnostics strip (always visible)
 
 The strip always shows five KPIs. Stress games use the standard five below; each ladder level uses its own five.
@@ -168,6 +192,7 @@ This screen appears when the DUT fails, the user stops the game, or a ladder lev
 | Unlock notice (Ladder clear only) | Text | What is now open | ≤ 60 chars, e.g. "Level 2 · Data Call unlocked for gNB-X sw 4.2.1" |
 | Triggering moves | Ordered list | Last 5 moves before the end | Move + timestamp, oldest first |
 | KPI snapshot | Table | All 5 KPIs at the end vs threshold | Same KPI set and units as that game's Diagnostics strip |
+| Signalling trace | Section | Last 160 messages of the run, same rows and inspector as the Arena | Auto-selects the last wrong or missing DUT response, else the last DUT response; "DUT responses only" filter |
 | Log capture | File link | Logs + game state for the last N seconds | Default N = 30 s; download as .zip; IMSI masked |
 | Replay seed | Mono | Seed + agent version for exact replay | Copyable |
 | Actions | Buttons | Next step | Default: "REPLAY", "New game", "View in History". After a level clear: "NEXT LEVEL" (primary), "Replay", "View in History"; after clearing L5: "New game" replaces "NEXT LEVEL". |
@@ -193,7 +218,7 @@ This screen appears when the DUT fails, the user stops the game, or a ladder lev
 | Test connection | Button + result | Checks reachability | Result: OK / error text ≤ 80 chars |
 | Max UEs available | Mono (read-only) | Licence/hardware limit | Integer ≤ 60,000; caps the Lobby |
 | Emulated cells | Mono (read-only) | Cells available for Level 3 | Integer; 3 required for L3 (two in one TA, one in a second TA) |
-| Workflow library | Panel | The loaded `5g_signalling_workflows.json` | Schema name + version (`test-arena.signalling-workflows` 1.0.0), technology, generated date, workflow count (12), spec baseline (≤ 100 chars), fields to verify (29) |
+| Workflow library | Panel | The loaded `5g_signalling_workflows.json` | Schema name + version (`test-arena.signalling-workflows` 3.0.0), technology, generated date, contents ("17 workflows · 29 cases · 1927 steps · 107 RRC messages (UPER) · 92 NAS PDUs"), carrier (band · duplex · SCS · PRBs · TDD pattern), spec baseline, "10 defaults to verify", workflow list (ID · name · case count · category), expandable "NAS timers · 5GS ↔ EPS (14)" table (5GS timer, default, start, stop, TS 24.301 timer), "TS 24.301 interworking (10)" list with the 4G-GUTI → 5G-GUTI mapping, and "Not covered yet (6)" |
 | Datalake source | Text input | Endpoint for field captures | URL; read-only access only |
 | Ladder unlocks | Toggle | How ladder levels open | Enum: `Progressive` (default) / `All unlocked (demo)` |
 
@@ -221,7 +246,7 @@ Four gaps (G1–G4) and the new G13 block MVP content. The rest can be settled d
 | G14 | **Unlock persistence is undefined.** Should a clear carry over to a new DUT build, and does it expire? | Level card lock state, Unlock notice | Decide unlock scope (assumed: per exact DUT label, no expiry) | No (assumption used) |
 | G15 | **Level 3 needs multi-cell emulation**, which the PRD lists as an open question. | Cells (L3), Emulated cells | Confirm simulator support for ≥ 2 cells | No (mock emulates 2) |
 | G16 | **Tournament mode (S8) is out of MVP scope**, so there is no chained-run content here. | Lobby, Game Over | Keep as Should-Have; "NEXT LEVEL" is the manual equivalent for MVP | No |
-| G17 | **Workflow coverage gaps.** The library has no successful-registration workflow (L1 baseline), no PDU-session negotiation workflows (parked L2 branches) and no throughput workflows (L4). | L1 branch 1, L2, L4 branch sets | Add the workflows to the library; until then L1 branch 1 is built from WF-07 steps 1–4 + ACCEPT and L4 branches show `—` | No (marked in UI) |
-| G18 | **29 library fields are marked `verify: true`.** Their values depend on the TS 38.508-1 release and PIXIT/ICS. | Defaults to verify badge, Message flow | Confirm the 38.508-1 baseline per customer; clear the flags in the library | No (warning shown) |
+| G17 | **Workflow coverage gaps.** The library has no #21 synch-failure encoding, no full flows for SIP 480/503/408 (only a matrix row), no video response matrix, no UE-requested PDU session modification and no throughput flows (L4); `notCoveredYet` lists 6 more areas, and the LTE RRC/L1 side of EPS fallback waits for the LTE stage. | L1 branch 13, L5 branches 4–6, L2, L4 | Add the flows; until then branch 13 adapts WF-07b and branches 4–6 swap the 486 ("Adapted"), three video branches are dropped and L4 shows `—` | No (marked in UI) |
+| G18 | **10 configuration areas are listed in `defaults.verify`** (band/ARFCN, TDD pattern, CORESET#0, PRACH, SR/HARQ timing, TDRA, RLC/PDCP timers, LCH priorities, SIB1 timers, A3/cell power). They depend on the TS 38.508-1 release and PIXIT/ICS. | Defaults to verify badge | Confirm the 38.508-1 baseline per customer | No (warning shown) |
 | G19 | **Library ownership and versioning are undefined.** | Settings · Workflow library | Name an owner, a release process and a compatibility rule for `schemaVersion` | No |
 | G20 | **Cohort fan-out of single-UE workflows is unspecified** (stagger, identities, per-UE judging, log volume). | Arena KPIs, Event log | Define the fan-out rule; the static build narrates one representative UE | No (assumption used) |

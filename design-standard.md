@@ -1,8 +1,11 @@
 # Test Arena — Design Standard
 
-*Visual specification v2.2 · 2 Nov 2026 · supersedes §5 "Design Standard" in `PRD.md`*
+*Visual specification v2.5 · 4 Nov 2026 · supersedes §5 "Design Standard" in `PRD.md`*
 
 > **Change log**
+> - **v2.5 (4 Nov 2026):** NAS decode block: IE table, security block and the protected-PDU hex; Settings timer and interworking tables.
+> - **v2.4 (3 Nov 2026):** PHY/MAC rows in the trace and message flow (quieter weight, dotted arrows, gNB-internal square), Signalling / All layers toggle, decoder blocks (hex rows, DCI field table, folded ASN.1 tree with absent-IE lines, SDP block), and the "Adapted" and "Composed" tags.
+> - **v2.3 (2 Nov 2026):** Signalling trace: lane diagram, verdict colours, IE tree and the agent/trace tabs.
 > - **v2.2 (2 Nov 2026):** Visuals for the signalling workflow library: the message-flow table, direction glyphs, timer marks, injection steps, workflow reference tags and verify badges; five-level ladder layout; Japanese term 手順.
 > - **v2.1 (2 Nov 2026):** Added visuals for the Procedure Ladder: level cards (locked / open / cleared), the level connector, the clear mark (突破), branch-passed, level-clear and level-unlock moments, and two Japanese vocabulary terms. Level clear joins the `--dur-epic` moments.
 > - **v2 (29 Oct 2026):** Previous release.
@@ -359,6 +362,13 @@ Depth comes from **layer colour plus edge light**, not big drop shadows.
 | **Corner brackets** | On the cohort arena and score block: four 12 px L-shaped corner marks in `--line-2` (HUD framing). No full border. |
 | **Status dot** | 8 px circle, solid accent, with a 2 s soft pulse ring only while `RUNNING`. |
 | **Message flow** | A quiet sequence table on `--bg-2`, hairline `--line-hair` row rules, no zebra striping. UL steps read top-down like a ladder diagram: direction glyph first, then message. The **injection step** gets a 2 px `--accent-warn` left bar and an "Injection" tag; it is the only accent in the table. Steps a branch skips (`optional`) are `--text-2`. Expanded `extends`/`ref` steps sit under a 1 px `--line-1` group rule labelled with the parent workflow ID. |
+| **Signalling trace** | A protocol-analyser list on `--bg-2`. Each row: mono time, a 150 px lane diagram (UE · gNB · 5GC · IMS; the DUT lane 2 px `--line-2`, others 1 px `--line-1`), mono message name, caption meta. Arrows: tester messages `--text-2`; DUT responses `--text-1`; late responses and tester injections `--accent-warn`; wrong or missing DUT responses `--accent-shu`, dashed with a cross for "no response". The selected row gets `--bg-3` and a 2 px cyan left bar. |
+| **PHY/MAC rows** | Transport steps (DCI, PDSCH/PUSCH, HARQ-ACK, SR, PRACH) sit one step quieter than signalling: row min-height 30 px, message in `caption` size at weight 400, arrow 1 px with a 1–2 dotted dash. "gNB decodes PUSCH" is a 7 px square on the gNB lane. In the Briefing message flow these rows are hidden by default and shown in `--text-2` under "All layers". |
+| **Decoder blocks** | Inside the inspector, each decode is an `insp-sec` with a `label` heading ("DCI 1_0 · PDCCH", "MAC PDU · TS 38.321", "RRC message · ASN.1", "NAS PDU · TS 24.501", "SIP"). Hex sits in a `--bg-2` box with a hairline border, mono `caption`, grouped in bytes, wrapping anywhere, with a Copy button beside it. The DCI field table is a compact `caption` table (28 px rows, right-aligned bits and value). The ASN.1 tree folds single-child envelopes into one "a › b › c" path; nested nodes larger than a few lines start collapsed behind a ▸ disclosure; "Absent (OPTIONAL)" / "Absent (extensions)" lines are `--text-2`. SDP is a pre-wrapped mono block. |
+| **NAS decode** | The same decoder pattern as RRC: a key–value head (message + TS 24.501 clause, procedure, decoded summary, TS 24.301 equivalent, container, library ref), the plain PDU hex, then an IE table in the compact `caption` table style (IE · IEI · Len · value tree), an "Absent (OPTIONAL)" line in `--text-2`, then a separate "NAS security" section with the protected PDU hex. A played cause-matrix row puts its "Cause matrix" tag and hex above the table, with a caption saying the table is the library's message. |
+| **Library reference tables** | Settings shows the 5GS↔EPS timer table and the 24.301 interworking list inside `<details>` disclosures, using the compact table style; closed by default. |
+| **Adapted / Composed tags** | "Adapted" (a value differs from the library message, e.g. a cause octet) uses the amber tag (`--accent-warn` text and border); "Composed" (a flow joined from library flows) uses the neutral tag. The annotation text for an adapted step is `--accent-warn`. |
+| **IE inspector** | `--bg-1` pane. The DUT-response block has a 2 px left bar in the verdict colour (jade as expected, amber late, vermilion wrong or missing). IEs are a mono tree: keys `--text-2`, values `--text-1`, nesting shown by a hairline left rule; `verify` objects carry an amber tag. |
 | **Level connector** | A 1 px line joining the level number badges in order. Segments after a `CLEARED` level are `--accent-hisui`; segments before a `LOCKED` level are `--line-2` and dashed (4 px dash, 4 px gap). |
 
 ### 4.8 Iconography
@@ -518,4 +528,5 @@ Run this before merging any visual change:
 - [ ] Locked states are readable: the lock icon and unlock hint are never faded below `--text-2`.
 - [ ] 3GPP message names, workflow IDs and timers are mono and spelled exactly as in the workflow library.
 - [ ] Amber marks the tester's injection or a value to verify, never a failure; failure stays vermilion.
+- [ ] In the trace, only wrong or missing DUT responses are vermilion; late is amber; as expected is jade.
 - [ ] The change still looks right on mobile (grain off, type steps down, 44 px tap targets).

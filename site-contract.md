@@ -1,8 +1,11 @@
 # Test Arena — Site Contract
 
-*v4 · 2 Nov 2026 · Derived from `PRD.md` (v1.2) and `content-model.md`. Visuals follow `design-standard.md`; any visual value not stated here comes from that document's tokens.*
+*v7 · 4 Nov 2026 · Derived from `PRD.md` (v1.5) and `content-model.md`. Visuals follow `design-standard.md`; any visual value not stated here comes from that document's tokens.*
 
 > **Change log**
+> - **v7 (4 Nov 2026):** Workflow library v3 (schema 3.x with `nasLibrary`): NAS messages read as library steps (no derived rows), NAS decode in the inspector and the download, "Carries NAS" on RRC steps, Settings timer and interworking tables, saved traces tied to the library version, new branches from WF-13 to WF-17. AC-S7, AC-C22, AC-C23, AC-C26, AC-C27, AC-C29 and AC-C35 updated; AC-C36 added.
+> - **v6 (3 Nov 2026):** Workflow library v2 (schema 2.x): branch `wf` references to cases, matrix rows, variants and composed flows; NAS rows split from their RRC containers; PHY/MAC steps in flows and the trace with a Signalling / All layers toggle and a PHY · MAC filter; inspector decodes DCI, PHY channels, MAC PDUs, RRC ASN.1, NAS and SIP; IMSI masking in hex; latency from library slot timing; compact saved traces. AC-S7, AC-C22–AC-C32 updated; AC-C33–AC-C35 added.
+> - **v5 (2 Nov 2026):** Signalling trace (PRD M7): Arena tab with ladder-diagram rows and IE inspector, Game Over trace section, stress moves replaying workflow slices with random access, trace in the downloaded log, and AC-C28–AC-C32.
 > - **v4 (2 Nov 2026):** Games driven by the signalling workflow library (PRD M11): `DATA.workflows`, workflow references on every branch, Briefing message flow, Arena step narration, workflow steps in reports, Level 5 (IMS Voice & Video), three cells for L3, Settings workflow panel, and acceptance criteria AC-S7 and AC-C22–AC-C27.
 > - **v3 (2 Nov 2026):** Added the Procedure Ladder (PRD M10): Lobby mode toggle and level cards with unlocks, ladder fields on Briefing, Arena and Game Over, `LEVEL CLEAR` outcome, `DATA.ladder`, placeholder G13, and acceptance criteria AC-N8 and AC-C16–AC-C21.
 > - **v2 (29 Oct 2026):** Previous release.
@@ -16,8 +19,8 @@ This contract defines a **static, client-side build** of Test Arena. It is a pla
 - **No backend calls.** The game loop is a JavaScript simulation (the mock adapter from M8). It uses a seeded pseudo-random engine plus data embedded in the file as JS objects:
   - `DATA.captures`
   - `DATA.games` (the four stress games)
-  - `DATA.ladder` (the five ladder levels: game model, explainer, branch set, state inputs, reward components and KPI set, as listed in `content-model.md` §3c–§3d and the PRD catalogue). Each branch carries a `wf` reference: `{ id: 'WF-07', case?: 'WF-07b', cause?: '#22', variant?: 'WF-05c', retune?: 'early' }`, or `null` for tester-defined branches.
-  - `DATA.workflows` (an embedded copy of `5g_signalling_workflows.json`, unchanged apart from whitespace). At boot the script checks `schema === 'test-arena.signalling-workflows'` and a `schemaVersion` with major version 1. Message flows, expected behaviour, spec baseline and verify counts are read from it, never retyped.
+  - `DATA.ladder` (the five ladder levels: game model, explainer, branch set, state inputs, reward components and KPI set, as listed in `content-model.md` §3c–§3d and the PRD catalogue). Each branch carries a `wf` reference: `{ id: 'WF-07', case?: 'WF-07a', at?: 'REGISTRATION REJECT' | { seq }, cause? | causes?: ['#9'], matrix?: '480', replace?, append?, matrixFrom?, variant?: 'WF-05c', cut?, retune?: 'early', compose?: [{ id, steps: [a, b] }], steps?: [a, b], injectNote?, label?, expect? }`, or `null` for tester-defined branches. `at` names the injection step; `steps` slices a flow by `seq` (stress moves).
+  - `DATA.workflows` (an embedded copy of `5g_signalling_workflows.json`, unchanged apart from whitespace). At boot the script checks `schema === 'test-arena.signalling-workflows'`, a `schemaVersion` with major version 3, a `messageLibrary` and a `nasLibrary` object. Message flows, PHY/MAC detail, ASN.1, NAS encodings, expected behaviour, spec baseline and the verification list are read from it, never retyped. Steps are indexed by `<flow id>#<seq>` so saved traces store only that key and decode again on display; each saved run records `traceLib` (the library version), and a trace recorded against another version is dropped on load rather than decoded against the wrong steps.
   - `DATA.difficulty`
   - `DATA.sampleRuns` (includes at least one ladder run of each outcome)
 - **No form submission.** Every control changes client-side state only.
@@ -122,10 +125,10 @@ The site is a single-page app with hash routes. The shell is always present.
 | Game model | Model name | ≤ 40 chars; `--accent-fuji` label; e.g. "Sequential game · subgame perfection" |
 | Model explainer | What the model means for this test | ≤ 140 chars, `body`, `--text-2` |
 | Branch set (Ladder) | Branches to cover | Ordered list, 4–18 items, count per difficulty from `CONFIG`; each ≤ 40 chars plus its workflow reference; rows are toggle buttons (`aria-pressed`) that select which message flow is shown; baseline selected by default |
-| Message flow (Ladder) | Selected branch's workflow steps | Panel titled "MESSAGE FLOW" + JP 手順. Table: seq · dir glyph · layer · message (+ container) · timers. Steps from `extends`/`ref` workflows are expanded inline. The injection step is tagged "Injection" (`--accent-warn` tag). Tester-defined branches show "No library workflow (tester-defined)". |
-| Expected behaviour (Ladder) | What passes the selected branch | ≤ 160 chars from `passCriteria` / `expectedUE` |
+| Message flow (Ladder) | Selected branch's workflow steps | Panel titled "MESSAGE FLOW" + JP 手順, with the flow label, case/variant name and "Composed"/"Adapted" tags. Segmented toggle "Signalling (n)" (default) / "All layers (n)" (remembered for the session), with a count caption. Table: seq · dir glyph · layer · message (+ container, note) · timers. Each NAS message is its own library step: an uplink NAS step comes just before its RRC container, a downlink one just after; 5GSM steps follow their NAS TRANSPORT step. Composed flows show a "from WF-xx" rule at each join. The injection step is tagged "Injection" (`--accent-warn`). Tester-defined branches show "No library workflow (tester-defined)". |
+| Expected behaviour (Ladder) | What passes the selected branch | ≤ 200 chars, derived from the library as in `content-model.md` §3 |
 | Spec baseline | Library spec references | ≤ 100 chars, `caption` |
-| Defaults to verify | `verify: true` fields used by this testcase | `--accent-warn` badge "n defaults to verify"; tooltip lists up to 3 field paths |
+| Defaults to verify | `defaults.verify` areas | `--accent-warn` badge "n defaults to verify"; tooltip lists up to 3 areas |
 | Clear rule (Ladder) | What clears the level | ≤ 80 chars; built from branch count + `CONFIG` minimum time (G13) |
 | Cohort mix | UE counts per slice + stacked bar | URLLC / eMBB / mMTC integers; total ≤ 60,000 |
 | Source captures | Captures that seeded the testcase | 1–5 items: capture ID · location · date |
@@ -167,6 +170,7 @@ The site is a single-page app with hash routes. The shell is always present.
 | Reward | Current reward | `display-l`, signed, 2 decimals, `--accent-kin` |
 | Reward breakdown | The game's three reward components | Each signed, 2 decimals |
 | Action | Agent's last move or branch | ≤ 30 chars |
+| Signalling trace tab | Protocol-analyser view of the run so far | Tab beside "Agent loop" (`role="tablist"`, ←/→ switch). Contents per `content-model.md` §3c-bis. Rows are buttons (`aria-pressed`); ↑/↓ moves the selection; Live follows the newest row and stops when a row is picked. The event log has an "Open signalling trace" link. |
 | Agent label | Algorithm + game model | "DQN v0.3 · " + model short name (Stackelberg, Sequential, Coordination, Congestion, Bargaining) |
 | Total score | Cumulative score | `display-l`, integer, `--accent-kin` |
 
@@ -189,9 +193,10 @@ The site is a single-page app with hash routes. The shell is always present.
 | Final score | Total score | `display-xl`, `--accent-kin` |
 | Branch results (Ladder) | Per-branch result | Table: branch · workflow · Passed / Failed / Not reached · time first passed. Failed rows in shu with an icon and a second line: step reached + expected behaviour. |
 | Unlock notice (Ladder clear) | Newly opened level | ≤ 60 chars, e.g. "Level 2 · Data Call unlocked for gNB-X sw 4.2.1". Not shown after L5. |
+| Signalling trace | Captured trace of the run | Full-width section between the hero and the KPI snapshot: rows on the left (7 columns), inspector on the right (5 columns); one column below tablet; failing exchange preselected |
 | Triggering moves | Last 5 moves | Move + timestamp, oldest first |
 | KPI snapshot | The game's 5 KPIs at end vs threshold | Breached rows marked in shu with an icon |
-| Log download | "Download logs" | Generates `run-<id>.json` client-side (ladder runs include branch results with workflow references, the step reached, and the library `schemaVersion`) |
+| Log download | "Download logs" | Generates `run-<id>.json` client-side (ladder runs include branch results with workflow references, the step reached, and the library `schemaVersion`; every run includes `signallingTrace` with each entry's `librarySource`, SFN/slot time and `decode` (DCI, PHY, MAC PDU, NAS, SIP), plus `messageLibrary` and `nasLibrary` objects holding every RRC and NAS message referenced). IMSI/SUPI is masked to the last 4 digits throughout the file. |
 | Replay seed | Seed + agent version | Copyable |
 | Buttons | Depends on outcome | Default: "REPLAY" (hero), "New game", "View in History". After L1–L4 clear: "NEXT LEVEL" (hero), "Replay", "View in History". After L5 clear: "NEW GAME" (hero), "Replay", "View in History". |
 
@@ -217,7 +222,7 @@ The site is a single-page app with hash routes. The shell is always present.
 | Interface | Ethernet/SCPI, GPIB, USB | Read-only list |
 | Max UEs | Simulator limit | `60,000`, read-only |
 | Emulated cells | Cells for Level 3 | `3`, read-only |
-| Workflow library | Loaded library | Panel titled "Workflow library": schema + version, technology, generated date, 12 workflows (listed as ID · name · category), spec baseline, "29 fields to verify" warning badge |
+| Workflow library | Loaded library | Panel titled "Workflow library": schema + version, technology, generated date, contents line (workflows · cases · steps · RRC messages · NAS PDUs), carrier, spec baseline, "10 defaults to verify" warning badge, 17 workflows (ID · name · case count · category), expandable "NAS timers · 5GS ↔ EPS" table, "TS 24.301 interworking" list with the GUTI mapping, and "Not covered yet" |
 | Datalake source | Capture source | "Embedded sample captures (N)" |
 | Ladder unlocks | Progressive or All unlocked (demo) | Segmented control; default Progressive. "All unlocked (demo)" opens every level for every DUT label without recording clears. |
 | Reset demo | "Clear session runs" | Clears in-memory and `localStorage` runs and ladder unlocks after a confirm |
@@ -347,7 +352,7 @@ These values use placeholders in `CONFIG`, each marked `// PLACEHOLDER (Gn)`:
 - **G4:** capture schema. The assumed shape is `id`, `location`, `date`, `feature`, `profile`.
 - **G13:** level-clear minimum run time per level and difficulty.
 
-Assumed without a placeholder: ladder unlocks are scoped to the exact DUT label and never expire (G14); the mock emulates three cells (G15); one representative UE is narrated per branch (G20); `verify: true` fields are shown as warnings, not blocked (G18); L1 branch 1 is built from WF-07 steps 1–4 + ACCEPT and L4 branches are tester-defined (G17).
+Assumed without a placeholder: ladder unlocks are scoped to the exact DUT label and never expire (G14); the mock emulates three cells (G15); one representative UE is narrated per branch (G20); the `defaults.verify` areas are shown as warnings, not blocked (G18); L1 branch 1 is composed from WF-07c steps 1–30 and WF-06b steps 23–44, L1 branch 13 adapts WF-07b to cause #21, and L4 branches are tester-defined (G17).
 
 Replacing any placeholder must need no code changes outside `CONFIG`.
 
@@ -380,7 +385,7 @@ Performance criteria (§5.7) are measured in Chrome on a mid-range laptop (4-cor
 | AC-S3 | Only Google Fonts requests leave the page | Network log over a full game shows requests only to `fonts.googleapis.com` / `fonts.gstatic.com` |
 | AC-S4 | No console errors or warnings | Console is clean across the full flow on every browser |
 | AC-S5 | Works with `localStorage` blocked | Private window or storage disabled: full flow works, including ladder unlocks within the session; session runs and unlocks simply don't persist |
-| AC-S7 | Workflow library embedded and checked | `DATA.workflows` deep-equals `5g_signalling_workflows.json`. Changing `schemaVersion` to `2.0.0` makes ladder mode show "Workflow library version not supported" in the Lobby, with no console errors and stress games still playable. |
+| AC-S7 | Workflow library embedded and checked | `DATA.workflows` deep-equals `5g_signalling_workflows.json`. Changing `schemaVersion` to `4.0.0` (or removing `messageLibrary` or `nasLibrary`) makes ladder mode show "Workflow library version not supported" in the Lobby, with no console errors and stress games still playable. |
 | AC-S6 | Placeholders isolated | All G1–G4 and G13 values sit in `CONFIG` with `// PLACEHOLDER (Gn)` comments. Changing one threshold changes behaviour with no other edits. |
 
 ### 5.3 Navigation and flow
@@ -420,12 +425,21 @@ Performance criteria (§5.7) are measured in Chrome on a mid-range laptop (4-cor
 | AC-C18 | Level-specific content | Each level's Briefing shows its own game model, explainer, branch set and clear rule; its Arena shows its own 3 state values, 3 reward components and 5 KPIs (per `content-model.md` §3c–§3d); L3 shows three cells |
 | AC-C19 | Branch coverage | Branch coverage in the header increases only when a branch passes, matches the Briefing count `N`, and a "Branch passed" event is logged each time |
 | AC-C20 | Level clear path | On Easy, L1 reaches 100% coverage and clears within 10 min with no DUT failure: clear mark appears, auto-route to Game Over "LEVEL CLEAR" with branch results all Passed and the unlock notice |
-| AC-C22 | Workflow traceability | Every ladder branch row shows a workflow reference whose ID exists in `DATA.workflows` (case, variant and cause also exist), or `—` only for the branches listed as tester-defined in the PRD. All 12 library workflows are referenced by at least one branch or stress game. |
-| AC-C23 | Message flow matches the library | For any selected branch, the Briefing's steps equal the library steps in count, order, direction, layer and exact message name (with `extends`/`ref` expanded); the injection step is tagged |
-| AC-C24 | Step narration | During a ladder game, every step narrated in the event log uses an exact library message name, and the header's workflow step advances in order |
+| AC-C22 | Workflow traceability | Every ladder branch row shows a workflow reference whose ID exists in `DATA.workflows` (case, variant and cause also exist), or `—` only for the branches listed as tester-defined in the PRD. All 17 library workflows are referenced by at least one branch or stress game. |
+| AC-C23 | Message flow matches the library | For any selected branch, the Briefing's steps (All layers) equal the library steps of that flow in order and exact message name, including the library's NAS steps (e.g. L1 branch 2 = WF-07a with REGISTRATION REQUEST just before RRCSetupComplete); the injection step is tagged |
+| AC-C24 | Step narration | During a ladder game, every step narrated in the event log (signalling steps only; PHY/MAC go to the trace) uses an exact library message or NAS name, and the header's workflow step advances in order |
 | AC-C25 | Workflow step in reports | A ladder DUT failure's reason and failed branch row name the workflow and step; the downloaded log contains `wf`, `stepReached` and `schemaVersion` |
-| AC-C26 | Settings shows the library | Workflow library panel shows `test-arena.signalling-workflows` 1.0.0, 12 workflows and "29 fields to verify" |
-| AC-C27 | Level 5 plays | With All unlocked (demo), L5 runs on Easy with branches WF-03, WF-04, WF-09a, WF-09b, shows the IMS KPI set and "DQN v0.3 · Bargaining", and can clear |
+| AC-C26 | Settings shows the library | Workflow library panel shows `test-arena.signalling-workflows` 3.0.0, 17 workflows, "107 RRC messages", "92 NAS PDUs" and "10 defaults to verify" |
+| AC-C27 | Level 5 plays | With All unlocked (demo), L5 runs on Easy with branches WF-03, WF-04, WF-09a, WF-09a · 480, shows the IMS KPI set and "DQN v0.3 · Bargaining", and can clear |
+| AC-C28 | Trace shows the full flow | During any game the trace lists every narrated message with exact library names; stress RACH moves show Msg1: PRACH preamble, Msg2 DCI and RAR, Msg3, then RRCSetupRequest; ladder flows match the Briefing's message flow |
+| AC-C29 | Messages decoded | RRCSetupRequest shows `ue-Identity` and `establishmentCause` in its ASN.1 tree; RRCSetup shows UPER hex, the contained CellGroupConfig and "Absent (OPTIONAL)" lines; REGISTRATION REJECT shows the played cause and the cause-matrix NAS hex (e.g. `7E 00 44 03` for #3) tagged "Cause matrix"; DLInformationTransfer shows "Carries NAS" |
+| AC-C30 | DUT verdicts | gNB target: DL PHY/MAC/RRC rows and "gNB decodes PUSCH" carry a DUT verdict, UL rows read "UE sim", NAS rows "5GC emu". Latency is the library SFN/slot gap × load. Modem target: the UE lane is the DUT. Under barring, DUT responses read "late"; when rejecting, RRCSetup becomes "DUT sent RRCReject" or "DUT no response" |
+| AC-C31 | Trace in reports | Every Game Over (session and sample runs) shows the trace, with the failing exchange preselected on DUT DOWN; the downloaded log has `signallingTrace` with sender, verdict, latency and `decode`, plus the referenced `messageLibrary` entries |
+| AC-C32 | Trace usability | "PHY · MAC" off hides every transport row; "DUT responses only" hides tester rows; ↑/↓ moves the selection; no horizontal scroll at 320 px; message names wrap on phones |
+| AC-C33 | PHY and MAC decoded | Selecting "Msg2: DCI 1_0 (RA-RNTI)" shows RA-RNTI, CORESET#0 and a field table including "Modulation and coding scheme"; "Msg2: Random Access Response" shows the MAC PDU with `timingAdvanceCommand` and `tempC-RNTI`; "HARQ-ACK" shows PUCCH with `harqProcess` and `counterDAI` |
+| AC-C34 | Identity masking | No view and no downloaded log contains the reference IMSI in plain digits or in NAS BCD hex; the last 4 digits remain |
+| AC-C35 | Library v3 coverage | Every L1–L3 and L5 branch resolves without `?`; L1 baseline is WF-13a; L1 branch 13 and L5 branches 4–6 are tagged "Adapted"; L5 "RLF during active call" plays WF-03 then WF-12 ("Composed"); every workflow WF-01 to WF-17 is referenced by a branch or stress move |
+| AC-C36 | NAS decoded | Selecting REGISTRATION REQUEST shows "TS 24.501 8.2.6", a TS 24.301 equivalent, an IE table including "5GS registration type" and an "Absent (OPTIONAL)" list; a protected NAS message (e.g. SECURITY MODE COMMAND in WF-13a) shows the NAS security block and the protected hex |
 | AC-C21 | Failure on a ladder level | A DUT failure during a level routes to "DUT DOWN" with branch results showing Passed / Failed / Not reached, and does not change any lock state |
 
 ### 5.5 Behaviour and visual conformance

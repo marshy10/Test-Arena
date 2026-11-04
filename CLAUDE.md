@@ -9,7 +9,7 @@ There are two ways to play:
 - **Stress games:** four endless load games (Signalling Storm, Retry Loop, Small-Packet Flood, GBR Squeeze).
 - **Procedure Ladder:** five levels played in order (L1 Registration → L2 Data Call → L3 Handover & Mobility → L4 Throughput → L5 IMS Voice & Video). Each level uses a different game-theory model (sequential, coordination, Stackelberg, congestion/Nash bargaining, alternating-offers bargaining), has its own branch set and KPIs, and unlocks the next level when cleared.
 
-Every ladder branch and stress move traces to a 3GPP signalling workflow in `5g_signalling_workflows.json` (12 workflows, WF-01 to WF-12). Treat that file as the source of truth for message names, sequences, timers and expected UE behaviour: embed it as `DATA.workflows` and read from it, never retype it.
+Every ladder branch and stress move traces to a 3GPP signalling workflow in `5g_signalling_workflows.json` (schema 3.0.0: 17 workflows WF-01 to WF-17, 29 cases, 1,927 PHY-to-SIP steps with SFN/slot timing, 107 RRC messages in full TS 38.331 ASN.1, 92 NAS PDUs decoded per TS 24.501 with TS 24.301 links, plus 5GS↔EPS timer and interworking tables). Treat that file as the source of truth for message names, sequences, timers and expected UE behaviour: embed it as `DATA.workflows` and read from it, never retype it.
 
 ## Technical stack and constraints
 
@@ -28,11 +28,11 @@ Every ladder branch and stress move traces to a 3GPP signalling workflow in `5g_
 | `design-standard.md` | Colour, typography, spacing, texture and motion tokens, plus a merge checklist | Before any visual decision. **It overrides the PRD's Design Standard section.** |
 | `content-model.md` | Field-level content constraints, per-game KPI and state sets, and the open gaps (G1–G16) | When writing copy or sample data, or when you hit an undefined value |
 | `PRD.md` | Vision, personas, prioritised features, the workflow library mapping, the Procedure Ladder game catalogue, constraints, success criteria | When judging scope or priority, or when you need the branch sets, workflow references and game models for ladder levels. Must-Haves only, unless told otherwise. |
-| `5g_signalling_workflows.json` | The signalling workflow library: 12 3GPP workflows with steps, IEs, timers, failure cases, cause matrices and pass criteria | Whenever you build or change a ladder branch, message flow, narration or report. |
+| `5g_signalling_workflows.json` | The signalling workflow library (schema 3.0.0): 17 workflows and their cases, each step with DCI/PHY/MAC detail, RRC `messageRef` into the ASN.1 message library, NAS steps with `nasMessageRef` into the NAS library (IEs, security, TS 24.301 equivalent), SIP headers/SDP, timers, cause and SIP response matrices, pass criteria and the `defaults.verify` list | Whenever you build or change a ladder branch, message flow, narration or report. |
 
 **If documents conflict**, use this order: site contract → design standard → content model → PRD.
 
 ## Current state
 
-- `index.html` implements site contract v4: the embedded workflow library (`DATA.workflows`, checked against schema 1.x), workflow-traced branch sets for L1–L3 and L5, Briefing message flow, Arena step narration, three cells for L3 and the Settings workflow panel. Ladder and workflow checks (AC-N8, AC-S7, AC-C16–AC-C27) pass in automated Chrome tests; the full cross-browser AC sweep (§5.1) is still to run.
-- If `5g_signalling_workflows.json` changes, re-embed it in `index.html` as `WORKFLOW_LIBRARY` (whitespace-only changes allowed) and check that every branch's `wf` reference still resolves.
+- `index.html` implements site contract v7: the embedded library v3 (`DATA.workflows`, checked against schema 3.x with `messageLibrary` and `nasLibrary`), NAS messages as library steps with a full NAS decode, branch sets drawn from WF-01 to WF-17 (L1 19, L2 14, L3 12, L5 15), PHY/MAC steps in the Briefing and trace, an inspector that decodes DCI, PHY channels, MAC PDUs, RRC ASN.1, NAS and SIP, IMSI masking, and saved traces tied to the library version. Automated Chrome checks pass (56 regression, 29 trace); the full cross-browser AC sweep (§5.1) is still to run.
+- If `5g_signalling_workflows.json` changes, re-embed it in `index.html` as `WORKFLOW_LIBRARY` (minified, whitespace-only changes) and check that every branch's `wf` reference still resolves: `seq` numbers in `at: { seq }` and stress `steps: [a, b]` slices are tied to this version.

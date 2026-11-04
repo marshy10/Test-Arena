@@ -1,8 +1,11 @@
 # Anritsu AI-RAN Test Arena — Product Requirements Document
 
-*v1.2 · 2 Nov 2026 · Marsh Dsouza*
+*v1.5 · 4 Nov 2026 · Marsh Dsouza*
 
 > **Change log**
+> - **v1.5 (4 Nov 2026):** Moved to **workflow library v3** (schema 3.0.0): every NAS message is its own step, decoded IE by IE from a new NAS library (92 PDUs, TS 24.501 clause, security header, protected PDU, TS 24.301 equivalent); five new workflows (WF-13 initial registration + PDU sessions, WF-14 de-registration, WF-15 periodic registration, WF-16 PDU session release and 5GSM/5GMM errors, WF-17 5GS–EPS interworking); 5GS↔EPS timer and interworking tables. Branch sets updated: L1 19, L2 14, L3 12, L5 15. L1's baseline is now a real library flow.
+> - **v1.4 (3 Nov 2026):** Moved to **workflow library v2** (schema 2.0.0): every flow now carries PHY and MAC steps (DCI grants, PRACH/RAR, Msg3/Msg4, SR, HARQ-ACK/NACK and retransmissions, MAC PDUs) with SFN/slot timing; RRC messages are full TS 38.331 Rel-18 ASN.1 (UPER-encoded, every absent IE listed) in a shared message library; NAS PDUs are encoded and ride inside their RRC containers. Failure workflows are now organised as cases. Branch mapping, stress-move slices, the trace and the verification list updated to match.
+> - **v1.3 (2 Nov 2026):** Added the **signalling trace** to diagnostics (M7): every message the cohort sends and every DUT response, decoded to IE level from the workflow library, with a verdict on each DUT response. Stress moves now replay workflow slices, with random access (Msg1/Msg2) ahead of RACH moves.
 > - **v1.2 (2 Nov 2026):** Games are now driven by the **5G signalling workflow library** (`5g_signalling_workflows.json`, 12 workflows, 3GPP-baselined). Every ladder branch and stress move traces to a workflow ID. Added Level 5 (IMS Voice & Video), new feature M11, workflow mapping (§3), three-cell emulation, and new success criteria and open questions.
 > - **v1.1 (2 Nov 2026):** Added the **Procedure Ladder**, four game-theory levels for core mobile procedures (Registration → Data Call → Handover → Throughput). New features M10, S8 and N8; new game catalogue (§3); new success criteria and open questions (§6).
 > - **v1.0 (29 Oct 2026):** First release.
@@ -91,11 +94,11 @@ The scope assumes one developer working with AI coding agents. The Must-Haves fo
 | M4 | Game Theory engine v1 | Stackelberg leader–follower loop with a DQN agent choosing the next stress move from state + reward. On the ladder the agent chooses which branch to play next. | Vibe 6 |
 | M5 | Built-in stress games (4) | Signalling Storm, Retry Loop, Small-Packet Flood, GBR Squeeze, each a preset game with tunable intensity. Each move scales up a library workflow (see the stress-game mapping in §3). | Vibe 6 |
 | M6 | Live arena view | Cohort grid (URLLC / eMBB / mMTC), DUT status, State → Reward → Action panel, live QoS score. | Vibe 1 |
-| M7 | Built-in diagnostics | Live KPI strip (five KPIs per game; see catalogue). On failure, auto-captures the last N seconds of logs + game state. | Vibe 3 |
+| M7 | Built-in diagnostics | Live KPI strip (five KPIs per game; see catalogue) and a **signalling trace**: a protocol-analyser view of every message the cohort sends and every DUT response, drawn as a UE ↔ gNB ↔ 5GC ↔ IMS ladder diagram, from PHY up: DCI grants, HARQ-ACK and SR, MAC PDUs, the full TS 38.331 ASN.1 of every RRC message (UPER hex and decoded IE tree, absent IEs listed), every NAS PDU decoded IE by IE (TS 24.501, with its security header and TS 24.301 equivalent) and SIP headers/SDP and a verdict on each DUT response (as expected, late, wrong message, no response). On failure, auto-captures the last N seconds of logs, game state and the trace, focused on the failing exchange. | Vibe 3 |
 | M8 | Instrument adapter layer | One interface to the Multi-UE simulator; ships with a mock adapter for development and demos. | Platform |
 | M9 | Run history | Every game saved with config, score timeline, failure point and replay of the move sequence. | Diagnostics |
 | M10 | **Procedure Ladder (5 levels)** | Registration → Data Call → Handover & Mobility → Throughput → IMS Voice & Video. Each level has its own game model, branch set, five KPIs and clear rule. Levels unlock in order per DUT. | Vibe 1, Vibe 6 |
-| M11 | **Signalling workflow library** | Loads `5g_signalling_workflows.json` (schema `test-arena.signalling-workflows` v1.0.0). Every ladder branch and stress move references a workflow ID (plus failure case, variant or cause). The Briefing shows each branch's message flow; the Arena narrates messages and timers as they play; reports name the workflow step where the DUT went wrong. | Vibe 1, Vibe 3 |
+| M11 | **Signalling workflow library** | Loads `5g_signalling_workflows.json` (schema `test-arena.signalling-workflows` v3.0.0). Every ladder branch and stress move references a workflow ID (plus failure case, variant or cause). The Briefing shows each branch's message flow; the Arena narrates messages and timers as they play; reports name the workflow step where the DUT went wrong. | Vibe 1, Vibe 3 |
 
 ### Should-Have (v1.1)
 
@@ -108,7 +111,7 @@ The scope assumes one developer working with AI coding agents. The Must-Haves fo
 | S5 | Reverse mode (modem) | The network becomes the adversary for modem testing, replaying operator behaviour against the modem. | Persona Kenji |
 | S6 | Resilience leaderboard | Ranks DUT builds by resilience score and highest ladder level cleared, and shows the trend across software drops. | Persona Sofia |
 | S7 | Scheduled campaigns | Queue games overnight with a stop budget (time, failures). | Vibe 4 |
-| S8 | **Tournament mode** | Chains all five ladder levels in one run with state carried across (registered UE → active PDU session → handover with data running → throughput after handover → VoNR call over the same bearers). Workflow cross-references such as WF-09g (RLF during an active call, see WF-12) are played here. Finds interaction bugs that pass in isolated levels. | Vibe 2 |
+| S8 | **Tournament mode** | Chains all five ladder levels in one run with state carried across (registered UE → active PDU session → handover with data running → throughput after handover → VoNR call over the same bearers). Cross-workflow cases such as RLF during an active call (WF-03 + WF-12) are played here. Finds interaction bugs that pass in isolated levels. | Vibe 2 |
 
 ### Nice-to-Have (later)
 
@@ -128,34 +131,43 @@ The scope assumes one developer working with AI coding agents. The Must-Haves fo
 
 The library file `5g_signalling_workflows.json` is the single source of truth for what every move sends and what counts as correct.
 
-- **Schema:** `test-arena.signalling-workflows` v1.0.0 · technology 5G NR SA (5GS) · generated 2 Nov 2026.
-- **Spec baseline:** default message contents per TS 38.508-1 (clauses 4.5–4.7, 6); RRC TS 38.331; NAS TS 24.501; IMS TS 24.229 with conformance defaults TS 34.229-1/-5; conformance procedures TS 38.523-1; UE test mode TS 38.509.
-- **Test environment defaults:** PLMN 001/01; NR Cell 1 (serving, TAC 000001), NR Cell 2 (intra-frequency neighbour, same TA), NR Cell 3 (neighbour in TAC 000002, for mobility registration); S-NSSAI SST 1; SIB1 timers (T300, T301, T310, N310, T311, N311, T319).
-- **Step model:** each step has `seq`, `dir` (UL, DL, UE-internal, SS action), `layer` (RRC, 5GMM, 5GSM, SIP, SDP, RTP, UP, PHY, MAC), `channel`, `message`, `container`, `ies`, `ref` (into the defaults), `expect`, `optional` and `timers` (started/stopped).
-- **Outcome model:** success workflows have `passCriteria`; failure workflows add `causeMatrix`, `failureCases` and `variants`, each with the expected UE behaviour.
-- **Verification flags:** 29 fields are marked `verify: true` (typical 38.508-1 defaults that change between releases or depend on PIXIT/ICS). They must be checked against the 38.508-1 version the customer's suite is baselined on.
+- **Schema:** `test-arena.signalling-workflows` v3.0.0 · technology 5G NR SA (5GS), FR1 TDD · generated 3 Nov 2026 · 17 workflows, 29 cases, 1,927 steps.
+- **Spec baseline:** RRC ASN.1 TS 38.331 Rel-18 (UPER-encoded and decoded back); default message contents TS 38.508-1; DCI TS 38.212 7.3.1; MAC TS 38.321; PHY procedures TS 38.213/38.214/38.211; NAS TS 24.501 (every PDU hand-encoded and round-tripped); EPS NAS TS 24.301 for interworking; IMS TS 24.229 with TS 34.229-1/-5.
+- **Test environment defaults:** band n78, TDD, 30 kHz SCS, 40 MHz BWP, pattern DDDDDDDSUU; PLMN 001/01; Cells 1 and 2 in TAC 1, Cell 3 in TAC 2; reference UE identities (IMSI, 5G-S-TMSI, C-RNTI); DCI sizes, HARQ timing (K1, K2), SR config, radio bearers (SRB1–2, DRB1–4) and RRC procedure delays.
+- **Step model:** each step has `seq`, `time` (SFN, slot, ms), `dir` (UL, DL, UE-internal, SS test-system action), `layer` (PHY, MAC, RRC, 5GMM, 5GSM, EMM, SIP), `channel` and `message`, plus whichever applies: `pdcch` (DCI format, RNTI, search space, CORESET, aggregation level and every field with bit width and value), `pdsch`/`pusch`, `pucch` (HARQ-ACK or SR), `prach`, `macPdu`, `messageRef` (RRC, into the message library), `carriesNAS` (on RRC steps), SIP `headers`/`sdp`, `timers` (start, stop, expired, running), `note` and `expect`.
+- **NAS steps:** every NAS message is its own step (5GMM; 5GSM inside UL/DL NAS TRANSPORT; EMM for TS 24.301) with `nasMessageRef` into the NAS library, `carriedIn` (RRC message, field, and the NAS TRANSPORT payload container for 5GSM), `security` (security header type, MAC placeholder, sequence number, NAS COUNT, protected hex as carried), `procedure`, `summary` and `eps24301Equivalent`. UL NAS appears just before its RRC container; DL NAS just after.
+- **Message libraries:** 107 RRC messages (ASN.1 type, UPER hex, decoded IE tree with `_absentOptional`/`_absentExtensions` at every level, contained CellGroupConfig/NAS) and 92 NAS PDUs (TS 24.501 clause, procedure, TS 24.301 equivalent, plain hex, IEs with IEI/length/value, absent optional IEs, contained messages).
+- **Interworking references:** `nasInterworking24301` (10 places where EPS IEs ride in 5GS NAS, e.g. S1 UE network capability, selected EPS NAS algorithms, mapped EPS bearer contexts), `nasTimers` (14 timers with defaults, start/stop and their TS 24.301 equivalents, e.g. T3510 ↔ T3410/T3430) and `guti4G5GMapping` (TS 23.003 2.10.2).
+- **Outcome model:** success workflows have `passCriteria`; failure workflows have `cases` (each a full step list), some with a `causeMatrix` (cause, encoded NAS PDU, expected UE behaviour) or `sipResponseMatrix`; `variants` describe changes to a base flow.
+- **Verification list:** `defaults.verify` names 10 configuration areas (band/ARFCN, TDD pattern, CORESET#0, PRACH, SR and HARQ timing, TDRA tables, RLC/PDCP timers, logical-channel priorities, SIB1 UE timers, A3 and cell power) to check against the customer's TS 38.508-1 baseline.
+- **Not covered yet** (`notCoveredYet`): UE-requested PDU session modification, EAP-AKA′, NSSAA, SOR/UE parameters update; MT voice/video, IMS registration and emergency, SMS; RRC_INACTIVE, release with redirect, UAC barring; CHO, DAPS, inter-frequency HO with gaps; CA, BWP switching, standalone BFR, on-demand SI; ETWS/CMAS, positioning, NR-DC, RedCap, NTN. The LTE RRC and L1 side of EPS fallback arrives with the LTE stage.
 
-#### The 12 workflows and where they play
+#### The 17 workflows and where they play
 
 | ID | Workflow | Category | Plays in |
 | --- | --- | --- | --- |
-| WF-01 | MO Data Call | data · success | L2 baseline; stress games (RRC setup, service request) |
-| WF-02 | MT Data Call (paging) | data · success | L2; Signalling Storm (paging flood) |
-| WF-03 | IMS Voice Call (VoNR, MO) | ims-voice · success | L5 baseline; GBR Squeeze (5QI 1 dedicated flow) |
-| WF-04 | IMS Video Call (ViNR, MO), extends WF-03 | ims-video · success | L5 |
-| WF-05 | Intra-frequency handover (+ b inter-frequency, c new TA) | mobility-connected · success | L3 baseline |
-| WF-06 | Cell reselection in RRC_IDLE (+ b new TA, c priority-based) | mobility-idle · success | L3 |
-| WF-07 | Registration failure (10-entry cause matrix, + b auth failure, c NAS SMC reject) | failure-registration | L1 |
+| WF-01 | MO Data Call | data · success | L2 baseline; Signalling Storm, Small-Packet Flood, GBR Squeeze |
+| WF-02 | MT Data Call (paging) | data · success | L2; Signalling Storm (paging flood), Small-Packet Flood |
+| WF-03 | IMS Voice Call (VoNR, MO) | ims-voice · success | L5 baseline; GBR Squeeze |
+| WF-04 | IMS Video Call (ViNR, MO) | ims-video · success | L5 |
+| WF-05 | Intra-frequency handover (+ variant b, new TA) | mobility-connected · success | L3 baseline |
+| WF-06 | Cell reselection in RRC_IDLE (cases a same TA, b new TA + mobility registration) | mobility-idle · success | L3 |
+| WF-07 | Registration failure (cases a REJECT with 9-cause matrix, b auth failure #20 + AUTHENTICATION REJECT, c NAS SMC reject #23, d no response/T3510) | failure-registration | L1; Retry Loop |
 | WF-08 | MO data call failure (cases a–e, SERVICE REJECT cause matrix) | failure-data | L2; Retry Loop |
-| WF-09 | IMS voice call failure (cases a–h) | failure-ims-voice | L5 |
-| WF-10 | IMS video call failure (cases a–f) | failure-ims-video | L5 |
-| WF-11 | Handover failure, T304 expiry (+ b–d) | failure-mobility | L3 |
-| WF-12 | Radio link failure (+ b–e) | failure-radio | L3; cross-referenced by WF-09g |
+| WF-09 | IMS voice call failure (cases a 486 with response matrix [480/503/408, no final response, IMS-VoPS=0], b no 5QI 1 flow, c QoS rule rejected #83) | failure-ims-voice | L5 |
+| WF-10 | IMS video call failure (cases a 488, b video port 0, c video DRB configuration failure) | failure-ims-video | L5 |
+| WF-11 | Handover failure, T304 expiry (+ variant b, re-establishment fails on T311) | failure-mobility | L3 |
+| WF-12 | Radio link failure (+ variant e, no recovery) | failure-radio | L3; L5 "RLF during an active call" |
+| WF-13 | Initial registration + PDU session establishment (cases a internet + IMS sessions and configuration update, b with identification, c IMS PDU session reject #27) | registration · success | L1 baseline and identification; L2 PDU session reject; Retry Loop |
+| WF-14 | De-registration (cases a UE switch-off, b UE normal, c network-initiated with re-registration) | deregistration · success | L1 |
+| WF-15 | Periodic registration update (T3512) | registration · success | L1 |
+| WF-16 | PDU session release and 5GSM/5GMM error handling (cases a UE release, b network release #39 + re-establishment, c 5GSM STATUS, d 5GMM STATUS) | session-management · success | L2 |
+| WF-17 | 5GS–EPS interworking, TS 24.301 linkage (cases a EPS → 5GS idle mobility, b EPS fallback for IMS voice with 24.301 TAU) | interworking · success | L3 (a), L5 (b) |
 
 #### How a workflow becomes a move
 
-1. **Pick.** The agent picks a branch, which names a workflow and optionally a failure case, variant or cause (for example `WF-07 · #22`).
-2. **Replay.** The adapter replays the workflow's steps in order. `SS` steps (cell power changes, withheld responses, injected errors) are the tester's attack: that is where the game deviates from the happy path.
+1. **Pick.** The agent picks a branch, which names a workflow and optionally a case, a matrix row or a variant (for example `WF-07a · #22`).
+2. **Replay.** The adapter replays the steps in order, PHY to SIP; each NAS PDU is its own step next to the RRC message that carries it. The branch's injection step is where the game deviates from the happy path: an `SS` action (cell power change, withheld response), a cause-matrix row (the REJECT's NAS PDU is replaced by the matrix encoding), a SIP response-matrix row, or a variant note.
 3. **Fan out.** Workflows describe one UE. The cohort plays the same branch across many UEs with staggered start times, so per-UE outcomes become the level's KPIs (success %, latency, rejects, timeouts).
 4. **Judge.** The branch passes only if the DUT meets the workflow's `passCriteria` or the matching `expectedUE` (correct message, cause, timer start/stop, state). A wrong message, a missed timer or a hang is a branch failure; a crash or KPI breach is `DUT DOWN`.
 5. **Record.** The run log keeps the workflow ID, case and the step reached, so a failure report reads "Failed at WF-11 step 4: no RRCReestablishmentRequest before T311 expiry".
@@ -164,10 +176,22 @@ The library file `5g_signalling_workflows.json` is the single source of truth fo
 
 | Stress game | Workflow basis | What is scaled up |
 | --- | --- | --- |
-| Signalling Storm | WF-01 steps 1–4, WF-02 step 1 | RRCSetupRequest / SERVICE REQUEST bursts and paging floods |
-| Retry Loop | WF-08a, WF-08b, WF-07 (#22 + T3346) | UEs that ignore RRCReject wait time, T300 expiry and T3346 back-off |
-| Small-Packet Flood | WF-01 steps 1–12 | Short service-request-plus-data cycles from mMTC UEs |
-| GBR Squeeze | WF-03 steps 12–15 | Dedicated 5QI 1 QoS flows via PDU SESSION MODIFICATION until admission runs out |
+| Signalling Storm | WF-01 steps 8–16 (Msg1 → Msg4 HARQ-ACK), 8–22 (to RRCSetupComplete carrying SERVICE REQUEST); WF-02 steps 1–18 (paging → RRCSetupComplete) | Random-access and RRC setup bursts, paging floods |
+| Retry Loop | WF-08a, WF-08b, WF-07a (#22 + T3346), WF-13a (re-attach) | UEs that ignore RRCReject wait time, missing Msg4/T300 and T3346 back-off |
+| Small-Packet Flood | WF-01 steps 42–58 (SR → grant → PUSCH, CRC fail and retransmission), 42–45, 8–45; WF-02 | SR storms and short UL bursts from mMTC UEs |
+| GBR Squeeze | WF-03 steps 43–61 (PDU SESSION MODIFICATION for 5QI 1 to COMPLETE), 1–61; WF-01 steps 46–51 (DL data with NACK and retransmission) | Dedicated 5QI 1 QoS flows until admission and PRBs run out |
+
+Random access, scheduling requests and HARQ are now in the library itself, so stress moves replay them exactly as listed.
+
+#### Signalling trace and DUT response
+
+- **Who is the DUT.** For a gNB target, the gNB is the DUT: its DL RRC/MAC/PHY messages are DUT responses; the UE is simulated and the 5GC and IMS are emulated. For a modem target, the UE is the DUT and everything it sends is a DUT response.
+- **What each entry shows.** Time, sender and receiver lanes, layer, channel, container, SFN/slot, workflow and step, timers, the representative UE (index, slice, C-RNTI, masked 5G-S-TMSI, cell) and the full decode: DCI fields, PDSCH/PUSCH/PUCCH/PRACH parameters, MAC PDU, RRC ASN.1 (UPER hex, IE tree, absent IEs, contained CellGroupConfig/NAS, and which NAS messages it carries), NAS PDU (TS 24.501 clause, procedure, IE table with IEI/length/value, absent optional IEs, contained messages, security header with the protected PDU as carried, TS 24.301 equivalent), SIP headers and SDP. A PHY · MAC filter hides transport steps to leave the signalling.
+- **gNB-internal steps.** "gNB decodes PUSCH: CRC OK/fail" is the gNB's own HARQ decision, so for a gNB target it is a DUT response. NR has no PHICH: UL ACK/NACK shows as NDI toggling in the next grant.
+- **Identity masking.** The reference UE's IMSI/SUPI is masked to its last 4 digits everywhere it appears, including SIP URIs and the BCD digits inside NAS hex.
+- **Latency.** A DUT response's latency is the library's own SFN/slot gap to the previous step, stretched by the current load; under barring or rejecting it is 3× that.
+- **A verdict on every DUT response.** *As expected* (the message the workflow expects, with its latency), *late* (correct but slower than unloaded, e.g. while barring access), *wrong message* (e.g. RRCReject instead of RRCSetup) or *no response* (timer expiry, or the DUT going down).
+- **Effect on the game.** On the ladder, a wrong or missing DUT response means the branch must replay cleanly before it can pass. In stress games that UE's flow is abandoned and the next UE starts.
 
 ### Procedure Ladder — game catalogue
 
@@ -185,24 +209,29 @@ Branch tables list the order the branches are played in; the first row is always
 
 #### Level 1 — Registration
 
-- **Procedure tree:** RRC setup → REGISTRATION REQUEST (T3510 started) → Authentication → NAS Security Mode → REGISTRATION ACCEPT or REJECT (T3510 stopped) → RRCRelease. Source: WF-07 steps 1–6; TS 24.501 5.5.1.2.5; TS 38.523-1 9.1.5.
+- **Procedure tree:** RRC setup → REGISTRATION REQUEST (T3510 started) → [IDENTITY REQUEST/RESPONSE] → AUTHENTICATION → NAS SECURITY MODE → AS security, UE capability → REGISTRATION ACCEPT (T3510 stopped) / REJECT → REGISTRATION COMPLETE → PDU sessions (internet, IMS) → CONFIGURATION UPDATE; plus periodic registration and de-registration. Source: WF-07, WF-13, WF-14, WF-15; TS 24.501 5.5.1, 5.5.2, 5.4; TS 38.523-1 9.1.5.
 
 | # | Branch | Workflow | Correct DUT behaviour (from the library) |
 | --- | --- | --- | --- |
-| 1 | Initial registration accepted (baseline) | WF-07 steps 1–4 + ACCEPT *(no success workflow yet, see open questions)* | Registration completes within the latency target |
-| 2 | REJECT #3 Illegal UE | WF-07 cause matrix | USIM invalid for 5GS; delete 5G-GUTI, TAI list, ngKSI; no further attempts until power cycle |
-| 3 | REJECT #7 5GS services not allowed | WF-07 cause matrix | USIM invalid for 5GS services; 5GMM-DEREGISTERED.NO-SUPI |
-| 4 | REJECT #11 PLMN not allowed | WF-07 cause matrix | Add PLMN to the forbidden list; perform PLMN selection |
-| 5 | REJECT #12 Tracking area not allowed | WF-07 cause matrix | Add TAI to forbidden TAs for regional service; LIMITED-SERVICE |
-| 6 | REJECT #13 Roaming not allowed in this TA | WF-07 cause matrix | Add TAI to forbidden TAs for roaming; PLMN selection |
-| 7 | REJECT #15 No suitable cells in TA | WF-07 cause matrix | Add TAI to forbidden roaming list; search another TA |
-| 8 | REJECT #22 Congestion + T3346 | WF-07 cause matrix | Start T3346; no new registration until it expires |
-| 9 | REJECT #27 N1 mode not allowed | WF-07 cause matrix | Disable N1 mode for 3GPP access |
-| 10 | REJECT #62 No network slices available | WF-07 cause matrix | Store rejected NSSAI; no retry with the same NSSAI |
-| 11 | No response (T3510 × 5 → T3502) | WF-07 cause matrix | Retry on T3510 expiry; after 5 attempts start T3502 |
-| 12 | Authentication MAC failure (#20) | WF-07b | AUTHENTICATION FAILURE cause #20 |
-| 13 | Authentication synch failure (#21 + AUTS) | WF-07b | AUTHENTICATION FAILURE cause #21 with AUTS |
-| 14 | NAS SMC rejected (#23) | WF-07c | SECURITY MODE REJECT cause #23 on mismatched replayed capabilities |
+| 1 | Initial registration + PDU sessions (baseline) | WF-13a | Cleartext REGISTRATION REQUEST, full message in the SECURITY MODE COMPLETE container; SHT 3/4 then 2; internet and IMS PDU sessions with mapped EPS bearer contexts; configuration update completed |
+| 2 | REJECT #3 Illegal UE | WF-07a cause matrix | USIM invalid for 5GS; delete 5G-GUTI, TAI list, ngKSI; 5GMM-DEREGISTERED |
+| 3 | REJECT #7 5GS services not allowed | WF-07a cause matrix | USIM invalid for 5GS services |
+| 4 | REJECT #11 PLMN not allowed | WF-07a cause matrix | Forbidden PLMN list; PLMN selection |
+| 5 | REJECT #12 Tracking area not allowed | WF-07a cause matrix | Forbidden TAs for regional provision of service; LIMITED-SERVICE |
+| 6 | REJECT #13 Roaming not allowed in this TA | WF-07a cause matrix | Forbidden TAs for roaming; PLMN selection |
+| 7 | REJECT #15 No suitable cells in TA | WF-07a cause matrix | Forbidden TAs for roaming; search another TA |
+| 8 | REJECT #22 Congestion + T3346 | WF-07a cause matrix | Start T3346; no new attempt until expiry |
+| 9 | REJECT #27 N1 mode not allowed | WF-07a cause matrix | Disable N1 mode; select E-UTRA/EPS (24.301 attach) |
+| 10 | REJECT #62 No network slices available | WF-07a cause matrix | Store rejected NSSAI |
+| 11 | No response (T3510) | WF-07d | Retry after T3511; after 5 attempts start T3502 |
+| 12 | Authentication MAC failure (#20) | WF-07b | AUTHENTICATION FAILURE #20 (T3520); accepts AUTHENTICATION REJECT |
+| 13 | Authentication synch failure (#21 + AUTS) | WF-07b, adapted | AUTHENTICATION FAILURE #21 with AUTS *(library shows #20; the cause octet is changed, AUTS is a placeholder, and the flow stops after the failure)* |
+| 14 | NAS SMC rejected (#23) | WF-07c | SECURITY MODE REJECT #23 on mismatched replayed capabilities |
+| 15 | Identification procedure | WF-13b | IDENTITY RESPONSE with SUCI, then registration completes |
+| 16 | Periodic registration (T3512 expiry) | WF-15 | REGISTRATION REQUEST type periodic; REGISTRATION ACCEPT stops T3510 |
+| 17 | De-registration, switch off | WF-14a | DEREGISTRATION REQUEST (switch off); no accept expected |
+| 18 | De-registration, normal | WF-14b | T3521 started; stopped on DEREGISTRATION ACCEPT |
+| 19 | Network de-registration, re-registration required | WF-14c | DEREGISTRATION ACCEPT, then a new initial registration |
 
 - **KPIs (5):** Registration success (%), Registration latency (ms), Retries (/s), Rejects (/s), Procedure timeouts (/s).
 
@@ -216,14 +245,19 @@ Branch tables list the order the branches are played in; the first row is always
 | 1 | MO data call (baseline) | WF-01 | RRC cause mo-Data; service accepted, T3517 stopped; DRB1 carries data on QFI 1 |
 | 2 | MT data call via paging | WF-02 | Responds to paging with mt-Access; service type "mobile terminated services"; DL data received |
 | 3 | RRC connection rejected (wait time + T302) | WF-08a | No new mo-Data RRCSetupRequest until T302 expires |
-| 4 | RRC setup no response (T300 expiry) | WF-08b | Service request aborted; NAS informed; retry per upper layers |
+| 4 | No Msg4, T300 expiry | WF-08b | Contention resolution fails, RA re-attempted; on T300 expiry NAS is informed and the service request aborted |
 | 5 | SERVICE REJECT #9 / #10 | WF-08c cause matrix | Deregister, delete 5G-GUTI as required, initial registration |
 | 6 | SERVICE REJECT #22 + T3346 | WF-08c cause matrix | Start T3346; no service request until expiry |
 | 7 | SERVICE REJECT #28 / #7 | WF-08c cause matrix | Restricted area: NON-ALLOWED-SERVICE and mobility registration; #7: USIM invalid for 5GS |
 | 8 | Service request no response (T3517) | WF-08d | Abort after T3517 (15 s); release NAS connection locally; back to 5GMM-REGISTERED |
-| 9 | PDU session reactivation failure (#92) | WF-08e | No user data on PSI 1; retry later |
+| 9 | PDU session reactivation failure (#92) | WF-08e | Stop T3517; no user data on PSI 1; retry later |
+| 10 | IMS PDU session establishment reject (#27) | WF-13c | Stop T3580; keep the internet session; no immediate retry with the same DNN |
+| 11 | UE-requested PDU session release | WF-16a | T3582 started and stopped; RELEASE COMPLETE; mapped EPS bearer removed |
+| 12 | Network release (#39) and re-establishment | WF-16b | RELEASE COMPLETE, then a new PDU SESSION ESTABLISHMENT REQUEST |
+| 13 | 5GSM STATUS on PTI mismatch | WF-16c | Answers an invalid PTI with 5GSM STATUS #47 |
+| 14 | 5GMM STATUS received | WF-16d | No state change |
 
-- **Parked (no workflow yet):** the v1.1 PDU-session negotiation branches (IPv4v6 → IPv4 only, unknown DNN, non-subscribed S-NSSAI, SSC mode, 5QI downgrade, network release) return once matching 5GSM workflows are added to the library.
+- **Still parked:** UE-requested PDU session modification and the other PDU-session negotiation branches from v1.1 (IPv4v6 → IPv4 only, non-subscribed S-NSSAI, SSC mode, 5QI downgrade) until the library adds them.
 - **KPIs (5):** Session setup success (%), Setup latency (ms), Fallbacks (/s), Session rejects (/s), Session drops (/s).
 
 #### Level 3 — Handover & Mobility
@@ -233,25 +267,20 @@ Branch tables list the order the branches are played in; the first row is always
 
 | # | Branch | Workflow | Correct DUT behaviour |
 | --- | --- | --- | --- |
-| 1 | Intra-frequency handover (baseline) | WF-05 | MeasurementReport on A3; RA on target and RRCReconfigurationComplete before T304; PDCP continuity |
+| 1 | Intra-frequency handover (baseline) | WF-05 | MeasurementReport on A3; CFRA and RRCReconfigurationComplete before T304 |
 | 2 | Too-early trigger (bad leader: low offset) | WF-05 + A3 re-tune | Hands over without a drop or immediate return |
 | 3 | Too-late trigger (bad leader: high offset, long TTT) | WF-05 + A3 re-tune | Recovers before RLF, or re-establishes per WF-12 |
 | 4 | Ping-pong (bad leader: zero hysteresis, short TTT) | WF-05 + A3 re-tune | Avoids bouncing between Cell 1 and Cell 2 |
-| 5 | Inter-frequency handover | WF-05b | Measures target ARFCN with gaps if needed; hands over |
-| 6 | Handover into a new TA | WF-05c | Hands over to Cell 3, then mobility registration updating |
-| 7 | Idle-mode reselection | WF-06 | Reselects to Cell 2 and answers paging there |
-| 8 | Reselection into a new TA | WF-06b | Mobility registration updating with new TAI list |
-| 9 | Priority-based inter-frequency reselection | WF-06c | Follows SIB4 priorities and thresholds |
-| 10 | Handover failure (T304 expiry) | WF-11 | Reverts config, T311, RRCReestablishmentRequest with cause handoverFailure |
-| 11 | Re-establishment answered with RRCSetup | WF-11b | Releases old config, continues with RRCSetupComplete |
-| 12 | No suitable cell during T311 | WF-11c | Goes to RRC_IDLE and informs NAS |
-| 13 | Invalid reconfigurationWithSync | WF-11d | Re-establishes with cause reconfigurationFailure |
-| 14 | Radio link failure (T310 expiry) | WF-12 | Declares RLF at T310 expiry, re-establishes with otherFailure, RLF report correct |
-| 15 | RLF from RLC max retransmissions | WF-12b | rlf-Cause rlc-MaxNumRetx |
-| 16 | RLF from random access problem | WF-12c | rlf-Cause randomAccessProblem |
-| 17 | Beam failure recovery (pre-RLF) | WF-12d | Recovers via CFRA/CBRA with no RLF |
-| 18 | No recovery after RLF | WF-12e | RRC_IDLE; SERVICE REQUEST on return |
+| 5 | Handover into a new TA | WF-05 variant b | Hands over to Cell 3, then mobility registration updating |
+| 6 | Idle-mode reselection | WF-06a | Reselects to Cell 2 and answers paging there |
+| 7 | Reselection into a new TA | WF-06b | Mobility registration updating with new TAI list |
+| 8 | Handover failure (T304 expiry) | WF-11 | Target withholds the RAR; T304 expiry; T311; RRCReestablishmentRequest with cause handoverFailure |
+| 9 | Re-establishment fails (T311 expiry) | WF-11 variant b | RRC_IDLE; 5GMM recovers with registration or SERVICE REQUEST |
+| 10 | Radio link failure (T310 expiry) | WF-12 | Declares RLF at T310 expiry, re-establishes with otherFailure, RLF report correct |
+| 11 | No recovery after RLF | WF-12 variant e | RRC_IDLE; mobility registration or SERVICE REQUEST on return |
+| 12 | EPS → 5GS idle mobility | WF-17a | REGISTRATION REQUEST with mapped 5G-GUTI, UE status and EPS NAS message container; PDU sessions mapped from PDN connections |
 
+- **Dropped with library v3** (no flow in the library any more): inter-frequency handover, priority-based reselection, re-establishment answered with RRCSetup, invalid reconfigurationWithSync, RLF from RLC max retransmissions or random-access problem, beam failure recovery.
 - **KPIs (5):** HO success (%), Interruption time (ms), Ping-pong rate (%), RLF (/min), Session drops (/s).
 
 #### Level 4 — Throughput
@@ -277,23 +306,23 @@ Branch tables list the order the branches are played in; the first row is always
 
 | # | Branch | Workflow | Correct DUT behaviour |
 | --- | --- | --- | --- |
-| 1 | VoNR MO call (baseline) | WF-03 | RRC cause mo-VoiceCall; 5QI 1 flow before 180/200; dialog set up and released cleanly |
-| 2 | ViNR MO call | WF-04 | RRC cause mo-VideoCall; 5QI 1 and 5QI 2 flows; audio and video on separate DRBs |
-| 3 | Remote busy (486) | WF-09a | Call ends; dedicated QoS flow released |
-| 4 | Temporarily unavailable (480) | WF-09b | ACK; call cleared |
-| 5 | Service unavailable / P-CSCF failure (503) | WF-09c | Treats P-CSCF as failed; selects the next one or re-registers |
-| 6 | Request timeout (408 / timer B) | WF-09d | Call attempt terminated |
-| 7 | Dedicated QoS flow never set up | WF-09e | No UPDATE with curr:qos sendrecv; call fails or CANCEL |
-| 8 | UE rejects bad QoS rule | WF-09f | QoS flow not created; call set-up fails |
-| 9 | RLF during an active call | WF-09g (uses WF-12) | Re-establishes and continues, or drops the call cleanly |
-| 10 | IMS VoPS not supported | WF-09h | UE does not originate a VoNR call |
-| 11 | Video codec not acceptable (488) | WF-10a | ACK; may retry voice-only |
-| 12 | Video m-line rejected, audio accepted | WF-10b | Continues as voice-only; only QFI 2 used |
-| 13 | Video QoS flow not authorised | WF-10c | Video downgraded or removed via UPDATE/re-INVITE |
-| 14 | Remote busy / declined on video call | WF-10d | ACK; call cleared; QoS flows released |
-| 15 | Mid-call downgrade glare (491) | WF-10e | Retries re-INVITE after randomised timer |
-| 16 | Video DRB cannot be configured | WF-10f | RRC re-establishment (reconfigurationFailure); video call fails |
+| 1 | VoNR MO call (baseline) | WF-03 | RRC cause mo-VoiceCall; PDU SESSION MODIFICATION adds 5QI 1 before 180/200; dialog set up and released cleanly |
+| 2 | ViNR MO call | WF-04 | RRC cause mo-VideoCall; 5QI 1 and 5QI 2 flows with mapped EPS bearers; separate DRBs |
+| 3 | Remote busy (486) | WF-09a | ACK; call cleared |
+| 4 | Temporarily unavailable (480) | WF-09a response matrix, adapted | ACK; call cleared |
+| 5 | Service unavailable (503) | WF-09a response matrix, adapted | ACK; call cleared |
+| 6 | Request timeout (408) | WF-09a response matrix, adapted | ACK; call cleared |
+| 7 | No final response (timer B) | WF-09a response matrix | P-CSCF failure handling; re-register |
+| 8 | Dedicated QoS flow never set up | WF-09b | No UPDATE with curr:qos sendrecv; CANCEL, 487, ACK |
+| 9 | UE rejects bad QoS rule | WF-09c | PDU SESSION MODIFICATION COMMAND REJECT #83; QoS flow not created |
+| 10 | RLF during an active call | WF-03 steps 1–96 + WF-12 (composed) | Re-establishes and continues, or drops the call cleanly |
+| 11 | IMS VoPS not supported | WF-09a response matrix | No VoNR origination; EPS fallback or CS per domain selection |
+| 12 | EPS fallback for voice | WF-17b | Moves to E-UTRA; TS 24.301 TRACKING AREA UPDATE with active flag; PDU sessions map to PDN connections |
+| 13 | Video codec not acceptable (488) | WF-10a | ACK; may retry voice-only |
+| 14 | Video m-line rejected, audio accepted | WF-10b | Continues voice-only on QFI 2 |
+| 15 | Video DRB cannot be configured | WF-10c | RRC re-establishment (reconfigurationFailure); video call fails |
 
+- **Dropped with library v3** (WF-10a no longer has a response matrix): video QoS flow not authorised, video call declined (603), mid-call downgrade glare (491).
 - **KPIs (5):** Call setup success (%), Call setup time (ms, INVITE to 200 OK), QoS flow failures (/min), SIP error responses (/s), Call drops (/min).
 
 #### Clearing a level
@@ -422,6 +451,7 @@ The MVP is done when an engineer can go from lobby to a running stress game in u
 | Workflow coverage | Library workflows used by at least one game | 12 of 12 |
 | Traceability | Ladder branches that name a workflow ID (or are listed as tester-defined) | 100% |
 | Message trace | Ladder failure reports that name the workflow step where the DUT went wrong | 100% |
+| Signalling trace | Run reports that include the decoded trace, focused on the failing exchange when there is one | 100% |
 | Ladder unlocks | Level N is playable only after Level N−1 is cleared for the same DUT | 100% of cases |
 | Branch coverage | Agent covers the full branch set before declaring a level clear | 100% coverage on every clear |
 
@@ -441,6 +471,6 @@ The MVP is done when an engineer can go from lobby to a running stress game in u
 - What are the datalake schema and access path for field captures? To confirm with the data team.
 - **Ladder:** what minimum run time should a level need before it can be cleared, and should a clear expire when a new DUT build is loaded?
 - **Ladder:** does the Multi-UE simulator emulate the two or more cells Level 3 needs, or does that require a second instrument?
-- **Workflows:** who owns `5g_signalling_workflows.json`, how new versions are released, and which TS 38.508-1 version is the baseline for the 29 `verify` fields?
+- **Workflows:** who owns `5g_signalling_workflows.json`, how new versions are released, and which TS 38.508-1 version is the baseline for the 10 areas in `defaults.verify`? The library has no #21 synch-failure encoding (adapted from #20), no full flows for SIP 480/503/408 (played on the 486 flow) and no video response matrix (three L5 branches dropped). Real NAS integrity codes need keys from the test USIM; the library uses placeholders.
 - **Workflows:** the library has no successful-registration workflow (L1 baseline), no PDU-session negotiation workflows (parked L2 branches) and no throughput workflows (L4). Who writes them?
 - **Workflows:** how are single-UE conformance workflows fanned out across a 60K cohort (stagger, identities, per-UE judging) without overloading the simulator's message logging?
