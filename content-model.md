@@ -3,6 +3,7 @@
 *Companion to the Anritsu AI-RAN Test Arena PRD v1.2 · 2 Nov 2026*
 
 > **Change log**
+> - **4 Nov 2026 (v1.7):** Play modes (PRD M12, M13). **Manual:** the Lobby is driven by click, chat command or voice, with interpretation chips and a branch picker. **Autopilot:** campaign scope, budget and plan preview, an Autopilot banner in the Arena with Skip, Pin and Take control, a next-game countdown on Game Over, a Campaign Report screen, play-mode filters in History, and Voice and Autopilot knowledge controls in Settings. New gaps G21–G24.
 > - **4 Nov 2026 (v1.5):** Workflow library v3 (schema 3.0.0): NAS messages are library steps with their own decode (NAS library: TS 24.501 clause, IE table, absent IEs, security header, protected PDU, TS 24.301 equivalent); RRC steps name the NAS they carry; Settings lists the 5GS↔EPS timer and interworking tables; branch sets grow to L1 19, L2 14, L3 12, L5 15.
 > - **3 Nov 2026 (v1.4):** Workflow library v2 (schema 2.0.0): message flows include PHY/MAC steps with a Signalling / All layers toggle; trace rows carry SFN/slot; the inspector decodes DCI, PDSCH/PUSCH/PUCCH/PRACH, MAC PDUs, RRC ASN.1 (UPER hex, IE tree, absent IEs), NAS PDUs and SIP; a PHY · MAC filter; IMSI masked in hex; 10 verification areas.
 > - **2 Nov 2026 (v1.3):** Added the signalling trace (Arena tab and Game Over section): ladder-diagram rows, IE inspector and DUT response verdicts.
@@ -12,13 +13,14 @@
 
 ## Page order
 
-The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–M11 and to nothing else.
+The MVP needs seven screens plus a persistent shell. Each maps to Must-Haves M1–M13 and to nothing else.
 
 0. **App shell**: persistent top bar on all screens
-1. **Game Lobby**: choose mode, target, game or ladder level, and difficulty (M1, M10)
-2. **Testcase Briefing**: review the generated testcase and its message flows before Play (M2, M10, M11)
+1. **Game Lobby**: choose play mode (Manual or Autopilot), target and DUT; in Manual, the game or ladder level and difficulty by click, chat or voice; in Autopilot, the campaign scope and budget (M1, M10, M12, M13)
+2. **Testcase Briefing** (Manual) or **Campaign plan** (Autopilot): review the testcase and its message flows, or the planned games and their reasons, before Play (M2, M10, M11, M13)
 3. **Live Arena**: cohort, DUT, agent loop and diagnostics strip (M3–M7, M10)
 4. **Game Over**: failure, stop or level-clear report and log capture (M3, M7, M10)
+4b. **Campaign Report**: what an Autopilot campaign found and decided (M13)
 5. **Run History**: saved games and replay (M9)
 6. **Instrument Settings**: adapter connection and workflow library (M8, M11)
 
@@ -50,7 +52,13 @@ The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
 | Screen title | Arcade | "SELECT GAME" | ≤ 3 words, uppercase |
-| Mode | Toggle | Which kind of game | Enum: `Stress games`, `Procedure Ladder`; default Stress games |
+| Play mode | Toggle | Who chooses what to play | Enum: `Manual` (engineer chooses), `Autopilot` (agent chooses); default Manual; remembered per session |
+| Game type (Manual) | Toggle | Which kind of game | Enum: `Stress games`, `Procedure Ladder`; default Stress games (formerly "Mode") |
+| Command bar (Manual) | Text input + mic button | Plain-language instruction that fills the Lobby | ≤ 200 chars; placeholder "Type or say what to play, e.g. 'L1 on Hard, reject branches only'"; Enter submits; mic is push-to-talk (hold, or press once to start and once to stop) and hidden when voice is off or unsupported |
+| Voice state (Manual) | Inline status | Microphone state | Enum: `Listening…` / `Transcribing…` / transcript text / `Didn't catch that. Try again or type it.`; live transcript replaces the input text |
+| Interpretation chips (Manual) | Chip row | How the command was understood | One chip per slot: Target · DUT · Game or level · Branches · Difficulty; each chip is editable (opens the matching control); a chip the command didn't set reads "(unchanged)" |
+| Clarification (Manual) | Prompt + 2–4 choice chips | Shown when a command is ambiguous | ≤ 80 chars question, e.g. "Which 'reject'? REGISTRATION REJECT (L1) or SERVICE REJECT (L2)"; nothing changes until a choice is made |
+| Queue (Manual) | Ordered chip list | Games the engineer dictated to play in order | 1–5 items, e.g. "L2 · Normal → L3 · Normal"; removable; plays one after another with the usual Game Over between them |
 | Target type | Toggle | What is being stressed | Enum: `gNB / AI-RAN`, `Modem`; required |
 | DUT label | Text input | Name + build of the device, e.g. "gNB-X sw 4.2.1" | Required, ≤ 40 chars; saved with every run; ladder unlocks are tracked per DUT label |
 | Feature under test (Stress mode) | Card picker | One card per stress game | Enum (4): Signalling Storm, Retry Loop, Small-Packet Flood, GBR Squeeze; single select |
@@ -62,7 +70,11 @@ The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–
 | Level card · lock state | Badge + icon | Whether the level can be played | Enum: `LOCKED` / `OPEN` / `CLEARED`; locked cards show "Clear L<n−1> to unlock" (≤ 30 chars) |
 | Difficulty | Segmented control | Stress intensity | Enum: Easy / Normal / Hard / Brutal; default Normal |
 | Difficulty hint | Text | What the level means in numbers | ≤ 60 chars, e.g. "10K UEs · 2× burst rate" or "Baseline + 3 branches · 100 UEs" |
-| Primary action | Button | Generates the testcase | Label "GENERATE"; disabled until target, DUT label and a game or open level are set |
+| Primary action | Button | Generates the testcase | Manual: label "GENERATE"; disabled until target, DUT label and a game or open level are set. Autopilot: label "PLAN CAMPAIGN" |
+| Campaign scope (Autopilot) | Segmented control + optional picks | What Autopilot may choose from | Enum: `Everything` (default) / `Ladder only` / `Stress only` / `Custom` (multi-select levels and stress games) |
+| Campaign budget (Autopilot) | Two inputs | When the campaign stops | Time `HH:MM` (default 08:00, max 72:00) and/or failures to collect (1–20, default 3); at least one set |
+| Difficulty ceiling (Autopilot) | Segmented control | Highest difficulty Autopilot may use | Easy / Normal / Hard / Brutal; default Hard |
+| Knowledge summary (Autopilot) | Text | What Autopilot already knows about this DUT | ≤ 100 chars, e.g. "38 runs on this family · 4 failures on sw 4.2.1 · L1–L3 cleared"; or "No history for this DUT: starting from the gNB / modem defaults" |
 
 ## 2. Testcase Briefing (M2, M10)
 
@@ -82,7 +94,21 @@ The MVP needs six screens plus a persistent shell. Each maps to Must-Haves M1–
 | Source captures | List | Datalake captures used to seed the testcase | 1–5 items: capture ID, location, date; no subscriber IDs |
 | Stop conditions | List | What ends the game | Always "User Stop" + the game's failure rules (see G1); ladder levels add "Level clear" |
 | Generation time | Mono number | Proof of the < 2 s target | Seconds, 2 decimals |
+| Branch picker (Manual, Ladder) | Checkbox list | Play a subset of the level's branches | Baseline always checked and locked; ≥ 1 other branch; a subset run shows "Practice run: won't clear the level" (≤ 50 chars) |
 | Actions | Buttons | Start or go back | "PLAY" (primary), "Regenerate", "Back" |
+
+### 2b. Campaign plan (Autopilot)
+
+Replaces the single-testcase Briefing when Autopilot is chosen.
+
+| Field | Format | Description | Constraints |
+| --- | --- | --- | --- |
+| Campaign ID | Mono text | Unique campaign reference | Format `CMP-YYYYMMDD-NNN` |
+| Scope · budget · ceiling | Text | The settings from the Lobby | ≤ 100 chars |
+| Planned games | Ordered list | The next 5 games Autopilot intends to play | Per row: game or level (+ branch subset), difficulty, **reason** (≤ 80 chars, e.g. "REJECT #22 failed on sw 4.2.1: retest"), **source** chip (`Ladder order` / `Retest` / `Best record` / `Explore` / `Escalate`), break score (2 dp; "new" when never played) |
+| Row actions | Icon buttons | Edit the plan | Remove, move up/down, pin (keep regardless of score) |
+| Method note | Text | How picks are made | ≤ 120 chars: "Ladder order and retests first, then best break score with an exploration bonus (UCB)." |
+| Actions | Buttons | Start or change | "START CAMPAIGN" (primary), "Switch to Manual", "Back" |
 
 ## 3. Live Arena (M3–M7, M10)
 
@@ -99,7 +125,12 @@ The screen has four zones. All live values update at 10–20 Hz.
 | Branch coverage (Ladder only) | Mono + bar | Branches passed so far | `n / N` and %, integer; bar fills as branches pass |
 | Workflow step (Ladder only) | Mono | Position in the current branch's workflow | `WF-11 · step 4 / 10` |
 | Game state | Badge | Current state | Enum: `RUNNING` / `ESCALATING` / `STOPPED` / `DUT DOWN` / `CLEARED` |
-| Stop control | Button | Ends the game | Label "STOP"; one confirm: "Stop game and save run?" |
+| Stop control | Button | Ends the game | Label "STOP"; one confirm: "Stop game and save run?" (Autopilot: "Stop this game" or "Stop campaign") |
+| Play mode badge | Badge | Who is choosing | `MANUAL` or `AUTOPILOT · game n of plan` (Autopilot in the agent's wisteria colour) |
+| Why this game (Autopilot) | Text | Reason for the current pick | ≤ 80 chars, same text as the plan row |
+| Campaign controls (Autopilot) | Buttons | Steer the campaign | "Skip", "Pin", "Take control" (switches to Manual and keeps the current game running) |
+| Campaign budget left (Autopilot) | Mono | Remaining budget | e.g. "05:12:40 · 2 of 3 failures left" |
+| Command bar (Manual and Autopilot) | Text input + mic | In-game commands | Accepts "stop", "skip", "pin", "take control", "show the trace", "switch to <level/game> next"; "stop" always opens the confirmation |
 
 ### 3b. Cohort arena (canvas)
 
@@ -195,7 +226,22 @@ This screen appears when the DUT fails, the user stops the game, or a ladder lev
 | Signalling trace | Section | Last 160 messages of the run, same rows and inspector as the Arena | Auto-selects the last wrong or missing DUT response, else the last DUT response; "DUT responses only" filter |
 | Log capture | File link | Logs + game state for the last N seconds | Default N = 30 s; download as .zip; IMSI masked |
 | Replay seed | Mono | Seed + agent version for exact replay | Copyable |
+| Next game (Autopilot) | Countdown + text | What the campaign plays next | "Next: <game> · <reason>" with a 10 s countdown; "Pause campaign" stops the countdown; after a DUT failure it first shows "Recovering DUT…" until the adapter reports it ready |
 | Actions | Buttons | Next step | Default: "REPLAY", "New game", "View in History". After a level clear: "NEXT LEVEL" (primary), "Replay", "View in History"; after clearing L5: "New game" replaces "NEXT LEVEL". |
+
+## 4b. Campaign Report (M13)
+
+Shown when an Autopilot campaign ends (budget reached or Stop).
+
+| Field | Format | Description | Constraints |
+| --- | --- | --- | --- |
+| Banner | Arcade | Outcome | "CAMPAIGN COMPLETE" (budget reached) or "CAMPAIGN STOPPED" |
+| Summary | Mono row | Totals | Games played, run time, DUT failures, levels cleared, branches newly covered |
+| Failures found | Table | Ranked by severity | Run ID, game, failing KPI or workflow step, time; each links to its Game Over report |
+| Coverage | Before / after | Ladder levels and branches covered for this DUT build | Per level: `n / N` before → after |
+| Decisions | Table | Every pick with its reason, source and break score | One row per game, in order |
+| Knowledge update | Text | What changed in the knowledge base | ≤ 120 chars, e.g. "Signalling Storm · Hard now ranks first for this family" |
+| Actions | Buttons | Next step | "Run again" (same scope), "Export report", "View runs in History" |
 
 ## 5. Run History (M9)
 
@@ -203,7 +249,8 @@ This screen appears when the DUT fails, the user stops the game, or a ladder lev
 | --- | --- | --- | --- |
 | Run list · columns | Table | One row per game | Date, Game ID, DUT label, Game, Difficulty, Duration, Outcome, Score. Ladder runs show Game as "L1 Registration". |
 | Outcome | Badge | How the game ended | Enum: `DUT DOWN` / `STOPPED` / `LEVEL CLEAR` / `PLATFORM ERROR` |
-| Filters | Controls | Narrow the list | DUT label, Game (stress games + five ladder levels), Outcome, date range |
+| Play mode | Badge | Who chose the game | `MANUAL` / `AUTOPILOT` with campaign ID; Autopilot runs are grouped under their campaign (expand/collapse) |
+| Filters | Controls | Narrow the list | DUT label, Target, Play mode, Game (stress games + five ladder levels), Outcome, date range |
 | Run detail · score timeline | Line chart | Score over the game | x = elapsed time, y = score |
 | Run detail · report | Link | Opens the Game Over report | Same fields as screen 4 |
 | Empty state | Text | Shown before first run | ≤ 60 chars, e.g. "No games yet. Pick one in the Lobby." |
@@ -221,6 +268,9 @@ This screen appears when the DUT fails, the user stops the game, or a ladder lev
 | Workflow library | Panel | The loaded `5g_signalling_workflows.json` | Schema name + version (`test-arena.signalling-workflows` 3.0.0), technology, generated date, contents ("17 workflows · 29 cases · 1927 steps · 107 RRC messages (UPER) · 92 NAS PDUs"), carrier (band · duplex · SCS · PRBs · TDD pattern), spec baseline, "10 defaults to verify", workflow list (ID · name · case count · category), expandable "NAS timers · 5GS ↔ EPS (14)" table (5GS timer, default, start, stop, TS 24.301 timer), "TS 24.301 interworking (10)" list with the 4G-GUTI → 5G-GUTI mapping, and "Not covered yet (6)" |
 | Datalake source | Text input | Endpoint for field captures | URL; read-only access only |
 | Ladder unlocks | Toggle | How ladder levels open | Enum: `Progressive` (default) / `All unlocked (demo)` |
+| Voice input | Toggle + note | Whether the mic appears in command bars | Off by default; note ≤ 120 chars on where audio is processed (on-premise engine, or the browser's recogniser in the demo); disabled with "Not supported in this browser" when unavailable |
+| Autopilot knowledge | Table + action | What Autopilot has learned | One row per target · DUT family: runs, failures, top 3 games by break score, last updated; "Reset" per row (confirm: "Forget everything Autopilot learned about <family>?") |
+| Autopilot defaults | Controls | Default scope, budget and ceiling for new campaigns | Same enums as the Lobby |
 
 ---
 
@@ -250,3 +300,7 @@ Four gaps (G1–G4) and the new G13 block MVP content. The rest can be settled d
 | G18 | **10 configuration areas are listed in `defaults.verify`** (band/ARFCN, TDD pattern, CORESET#0, PRACH, SR/HARQ timing, TDRA, RLC/PDCP timers, LCH priorities, SIB1 timers, A3/cell power). They depend on the TS 38.508-1 release and PIXIT/ICS. | Defaults to verify badge | Confirm the 38.508-1 baseline per customer | No (warning shown) |
 | G19 | **Library ownership and versioning are undefined.** | Settings · Workflow library | Name an owner, a release process and a compatibility rule for `schemaVersion` | No |
 | G20 | **Cohort fan-out of single-UE workflows is unspecified** (stagger, identities, per-UE judging, log volume). | Arena KPIs, Event log | Define the fan-out rule; the static build narrates one representative UE | No (assumption used) |
+| G21 | **The speech-to-text engine is not chosen.** On-premise engines differ in accuracy, languages and hardware. The demo can only use the browser's recogniser, which in Chrome sends audio to the browser vendor. | Command bar mic, Voice input setting | Pick the on-premise engine and languages; until then voice is opt-in in the demo with a visible note | No (opt-in, off by default) |
+| G22 | **Chat command scope is undefined.** It could be a constrained grammar over the library vocabulary or a local language model. | Command bar, Interpretation chips, Clarification | Freeze the command grammar and reference test set (200 commands); decide later on a local model | No (grammar assumed) |
+| G23 | **Autopilot numbers and knowledge scope are placeholders.** Exploration constant, break-value weights, default budget, and whether priors are shared across DUT families or customers. | Campaign plan, Knowledge summary, Settings | Set the UCB constant and break-value weights; decide knowledge sharing (assumed: per deployment, per target and DUT family, never across customers) | No (placeholders in `CONFIG`) |
+| G24 | **DUT recovery after a failure is instrument-specific.** Autopilot needs to reboot or reset the DUT to continue unattended. | Next game countdown ("Recovering DUT…"), Campaign Report | List which instruments and DUTs support automated recovery; otherwise the campaign pauses for the engineer | No (mock recovers instantly) |

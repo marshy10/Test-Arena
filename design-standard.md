@@ -1,6 +1,6 @@
 # Test Arena — Design Standard
 
-*Visual specification v2.5 · 4 Nov 2026 · supersedes §5 "Design Standard" in `PRD.md`*
+*Visual specification v2.5 · 4 Nov 2026 · supersedes §6 "Design Standard" in `PRD.md`*
 
 > **Change log**
 > - **v2.5 (4 Nov 2026):** NAS decode block: IE table, security block and the protected-PDU hex; Settings timer and interworking tables.

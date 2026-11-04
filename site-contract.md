@@ -1,8 +1,9 @@
 # Test Arena — Site Contract
 
-*v7 · 4 Nov 2026 · Derived from `PRD.md` (v1.5) and `content-model.md`. Visuals follow `design-standard.md`; any visual value not stated here comes from that document's tokens.*
+*v8 · 4 Nov 2026 · Derived from `PRD.md` (v1.7) and `content-model.md`. Visuals follow `design-standard.md`; any visual value not stated here comes from that document's tokens.*
 
 > **Change log**
+> - **v8 (4 Nov 2026):** Play modes (PRD M12, M13) for gNB / AI-RAN and modem targets. **Manual:** command bar with chat and push-to-talk voice, interpretation chips, clarification, queue, branch picker and practice runs. **Autopilot:** campaign scope, budget and ceiling, campaign plan, Arena banner with Skip, Pin and Take control, next-game countdown, Campaign Report route, knowledge base and Settings controls. Adds `DATA.commands`, `CONFIG.autopilot` (G23), placeholders G21–G24, behaviour §3.6 and acceptance criteria AC-P1–AC-P14. **Not yet built in `index.html`.**
 > - **v7 (4 Nov 2026):** Workflow library v3 (schema 3.x with `nasLibrary`): NAS messages read as library steps (no derived rows), NAS decode in the inspector and the download, "Carries NAS" on RRC steps, Settings timer and interworking tables, saved traces tied to the library version, new branches from WF-13 to WF-17. AC-S7, AC-C22, AC-C23, AC-C26, AC-C27, AC-C29 and AC-C35 updated; AC-C36 added.
 > - **v6 (3 Nov 2026):** Workflow library v2 (schema 2.x): branch `wf` references to cases, matrix rows, variants and composed flows; NAS rows split from their RRC containers; PHY/MAC steps in flows and the trace with a Signalling / All layers toggle and a PHY · MAC filter; inspector decodes DCI, PHY channels, MAC PDUs, RRC ASN.1, NAS and SIP; IMSI masking in hex; latency from library slot timing; compact saved traces. AC-S7, AC-C22–AC-C32 updated; AC-C33–AC-C35 added.
 > - **v5 (2 Nov 2026):** Signalling trace (PRD M7): Arena tab with ladder-diagram rows and IE inspector, Game Over trace section, stress moves replaying workflow slices with random access, trace in the downloaded log, and AC-C28–AC-C32.
@@ -22,14 +23,18 @@ This contract defines a **static, client-side build** of Test Arena. It is a pla
   - `DATA.ladder` (the five ladder levels: game model, explainer, branch set, state inputs, reward components and KPI set, as listed in `content-model.md` §3c–§3d and the PRD catalogue). Each branch carries a `wf` reference: `{ id: 'WF-07', case?: 'WF-07a', at?: 'REGISTRATION REJECT' | { seq }, cause? | causes?: ['#9'], matrix?: '480', replace?, append?, matrixFrom?, variant?: 'WF-05c', cut?, retune?: 'early', compose?: [{ id, steps: [a, b] }], steps?: [a, b], injectNote?, label?, expect? }`, or `null` for tester-defined branches. `at` names the injection step; `steps` slices a flow by `seq` (stress moves).
   - `DATA.workflows` (an embedded copy of `5g_signalling_workflows.json`, unchanged apart from whitespace). At boot the script checks `schema === 'test-arena.signalling-workflows'`, a `schemaVersion` with major version 3, a `messageLibrary` and a `nasLibrary` object. Message flows, PHY/MAC detail, ASN.1, NAS encodings, expected behaviour, spec baseline and the verification list are read from it, never retyped. Steps are indexed by `<flow id>#<seq>` so saved traces store only that key and decode again on display; each saved run records `traceLib` (the library version), and a trace recorded against another version is dropped on load rather than decoded against the wrong steps.
   - `DATA.difficulty`
-  - `DATA.sampleRuns` (includes at least one ladder run of each outcome)
+  - `DATA.sampleRuns` (includes at least one ladder run of each outcome, plus one sample Autopilot campaign of 4–6 runs with its decisions)
+  - `DATA.commands` (the chat/voice vocabulary, **built at boot** from `DATA.games`, `DATA.ladder` and `DATA.workflows`, never retyped): game and level names and numbers, branch names, 5GMM causes, SIP codes, workflow and case IDs, difficulties, targets, and verbs (play, run, start, only, then, replay, stop, skip, pin, take control, show).
+  - `CONFIG.autopilot` (G23): `{ c: 1.0, failBonus: 1.0, branchFailBonus: 0.5, planLength: 5, countdownSec: 10, defaultBudget: { time: '08:00', failures: 3 }, defaultCeiling: 'hard', priors: { gnb: [...], modem: [...] } }`. Each value is marked `// PLACEHOLDER (G23)`.
 - **No form submission.** Every control changes client-side state only.
 - **No auth, no database.**
   - Run History shows `DATA.sampleRuns` plus runs from the current session.
   - Session runs and ladder unlocks (keyed by exact DUT label) are held in memory.
-  - `localStorage` is optional, try/catch guarded, and used only so a refresh keeps session runs and unlocks.
-- **Deterministic.** The same seed + game (or level) + difficulty always produces the same move or branch sequence, failure or clear point, and final score.
-- **Placeholders.** Every undefined value (gaps G1–G4 and G13) lives in one `CONFIG` object at the top of the script, with each entry commented `// PLACEHOLDER (Gn)`.
+  - `localStorage` is optional, try/catch guarded, and used only so a refresh keeps session runs, unlocks, the Voice input setting and the Autopilot knowledge base.
+  - The **Autopilot knowledge base** is held in memory under the key `<target>|<DUT family>`. The DUT family is the DUT label without its trailing build/version token; for example, "gNB-X sw 4.2.1" → family "gNB-X". Each candidate game (stress game × difficulty, ladder level, or named branch subset) stores `{ plays, meanBreak, lastBuild, failedOn: [builds], qByMove: {...} }`. The knowledge base is seeded from `DATA.sampleRuns` at boot, then updated after every run in either play mode.
+- **Deterministic.** The same seed + game (or level) + difficulty always produces the same move or branch sequence, failure or clear point, and final score. An Autopilot campaign records a campaign seed and every decision, so the same knowledge base + campaign seed produces the same plan.
+- **Chat and voice in the static build.** Chat commands are parsed in the page by a deterministic grammar over `DATA.commands`; no text leaves the page. Voice uses the browser's `SpeechRecognition` (or `webkitSpeechRecognition`) **only when the engineer turns on Voice input in Settings** (off by default). The mic is hidden when the API is missing, and Settings notes that the browser may process audio in its vendor's cloud (G21). This is the one allowed exception to "no external requests", and it is opt-in.
+- **Placeholders.** Every undefined value (gaps G1–G4 and G13) lives in one `CONFIG` object at the top of the script, with each entry commented `// PLACEHOLDER (Gn)` (G1–G4, G13, and G23 for Autopilot).
 - **Debug hook.** Loading with `?debug=1` shows a small overlay with fps, tick count and elapsed time, and exposes `window.__arena` (read-only state snapshot, including ladder unlocks and branch coverage) so acceptance tests can be automated. It is hidden without the query string.
 
 ### Departures from the PRD (by design)
@@ -46,6 +51,10 @@ This contract defines a **static, client-side build** of Test Arena. It is a pla
 | Workflow library loaded from a file and replayed through the adapter | Embedded as `DATA.workflows`; the simulation narrates the steps and judges branches by its own model |
 | Cohort fan-out of workflows (G20) | One representative UE's steps are narrated; KPIs come from the cohort model |
 | Three emulated cells for Level 3 | Mock emulates Cell 1, Cell 2 (TAC 000001) and Cell 3 (TAC 000002) |
+| On-premise speech-to-text (G21) | Browser `SpeechRecognition`, opt-in, off by default; hidden when unsupported |
+| Chat understanding (G22) | Deterministic in-page grammar over `DATA.commands`; no language model |
+| Autopilot knowledge on the Test Arena host | In memory + optional `localStorage`, seeded from sample runs |
+| DUT recovery after a failure (G24) | Mock recovers instantly; the countdown shows "Recovering DUT…" for 2 s |
 
 ---
 
@@ -56,7 +65,8 @@ The site is a single-page app with hash routes. The shell is always present.
 | # | Route | Section | Purpose |
 | --- | --- | --- | --- |
 | 0 | all | **App shell** | Keeps the product, current game and simulator state visible from every screen. |
-| 1 | `#/lobby` (default) | **Game Lobby** | Lets the engineer choose a mode, target, DUT label, stress game or ladder level, and difficulty to start a game. |
+| 1 | `#/lobby` (default) | **Game Lobby** | Lets the engineer choose the play mode, target and DUT label, then either the game (by click, chat or voice) or an Autopilot campaign's scope and budget. |
+| 2b | `#/plan` | **Campaign plan** (Autopilot) | Shows the next five games Autopilot will play, each with its reason, source and break score, so the engineer can edit or approve before the campaign starts. |
 | 2 | `#/briefing` | **Testcase Briefing** | Shows the generated testcase, its game model and seed captures (and, for a ladder level, its branch set, each branch's workflow message flow and the clear rule) so the engineer knows exactly what will go on the air before pressing Play. |
 | 3 | `#/arena` | **Live Arena** | Plays the leader–follower game in real time, with the cohort, agent loop and diagnostics on one screen. |
 | 3a | | Arena header | Identifies the game and DUT, shows elapsed time, state and (ladder) branch coverage, and offers Stop. |
@@ -64,6 +74,7 @@ The site is a single-page app with hash routes. The shell is always present.
 | 3c | | Agent loop panel | Shows the State → Reward → Action cycle and the running score. |
 | 3d | | Diagnostics strip | Shows the game's five live KPIs against their failure thresholds, plus the event log. |
 | 4 | `#/gameover/:runId` | **Game Over** | Reports how and why the game ended (failure, stop or level clear), with the evidence needed to replay it. |
+| 4b | `#/campaign/:id` | **Campaign Report** | Summarises an Autopilot campaign: failures found, coverage before and after, every decision with its reason, and what the knowledge base learned. |
 | 5 | `#/history` | **Run History** | Lists every saved game and opens any run's report or score timeline. |
 | 6 | `#/settings` | **Instrument Settings** | Shows the simulated adapter configuration, simulator limits, the ladder unlock mode and the loaded workflow library. |
 
@@ -99,7 +110,12 @@ The site is a single-page app with hash routes. The shell is always present.
 | Field | Description | Constraints |
 | --- | --- | --- |
 | Screen title | "SELECT GAME" + JP sub-label ロビー + blade line | Display `h1` |
-| Mode | Stress games or Procedure Ladder | Two-option segmented control; default Stress games. Switching mode clears the game/level selection but keeps target, DUT label and difficulty. |
+| Play mode | Manual or Autopilot | Two-option segmented control above everything else; default Manual; remembered for the session. Autopilot hides the game type, cards, difficulty and command bar and shows the campaign fields. Target and DUT label are kept. |
+| Game type (Manual) | Stress games or Procedure Ladder | Two-option segmented control (formerly "Mode"); default Stress games. Switching clears the game/level selection but keeps target, DUT label and difficulty. |
+| Command bar (Manual) | Type or say what to play | Full-width input under the play mode, `aria-label="Command"`, ≤ 200 chars. Enter submits. Mic icon button at the right end (push-to-talk: hold Space while focused, or press once to start and once to stop); hidden when Voice input is off or unsupported. Behaviour in §3.6. |
+| Interpretation chips (Manual) | How the last command was understood | Chip row under the bar: Target · DUT · Game or level · Branches · Difficulty. Each chip is a button that focuses the matching control. Slots the command didn't set read "(unchanged)". The row is announced politely: "Understood: …". |
+| Clarification (Manual) | Ambiguous command | Question (≤ 80 chars) + 2–4 choice chips in place of the interpretation row; nothing changes until a choice is made; `Esc` dismisses it |
+| Queue (Manual) | Games dictated in order | Up to 5 chips, e.g. "L2 · Normal → L3 · Normal"; each removable; GENERATE starts the first; the next is offered on Game Over |
 | Target type | gNB / AI-RAN or Modem | Two-option segmented control; required; default gNB / AI-RAN |
 | DUT label | Device name + build | Text input, required, 1–40 chars, trimmed. Changing it re-evaluates ladder locks immediately. |
 | Game cards (×4, Stress mode) | Signalling Storm, Retry Loop, Small-Packet Flood, GBR Squeeze | Single select; content from `DATA.games` |
@@ -113,7 +129,11 @@ The site is a single-page app with hash routes. The shell is always present.
 | Difficulty | Easy / Normal / Hard / Brutal | Segmented control; default Normal |
 | Difficulty hint | What the level means in numbers | ≤ 60 chars, from `DATA.difficulty` (ladder hints include branch count) |
 | Validation message | Shown under DUT label if empty on Generate | Exactly: "Enter a DUT label to continue." |
-| Primary button | "GENERATE" | Hero button. Disabled until target, DUT label and an open game or level are set. |
+| Primary button | "GENERATE" (Manual) / "PLAN CAMPAIGN" (Autopilot) | Hero button. Manual: disabled until target, DUT label and an open game or level are set. Autopilot: disabled until target, DUT label and a budget are set. |
+| Campaign scope (Autopilot) | What Autopilot may choose | Segmented: Everything (default) / Ladder only / Stress only / Custom; Custom reveals multi-select chips for the 5 levels and 4 stress games |
+| Campaign budget (Autopilot) | Time and/or failures | Time input `HH:MM` (00:05–72:00, default from `CONFIG.autopilot`) and failures stepper (1–20, default 3). At least one must be set. |
+| Difficulty ceiling (Autopilot) | Highest difficulty allowed | Segmented Easy–Brutal; default Hard |
+| Knowledge summary (Autopilot) | What is known about this DUT | ≤ 100 chars from the knowledge base, updates as the DUT label changes; cold start reads "No history for this DUT: starting from the <target> defaults" |
 
 ### 2. Testcase Briefing
 
@@ -135,7 +155,19 @@ The site is a single-page app with hash routes. The shell is always present.
 | Stop conditions | What ends the game | "User Stop" + the game's failure rules from `CONFIG`; ladder adds "Level clear" |
 | Generation time | Simulated generation duration | Seconds, 2 decimals, always < 2.00 |
 | Seed | Deterministic seed | 8-char hex; copyable |
+| Branch picker (Manual, Ladder) | Choose a subset of branches | Checkbox per branch row; baseline checked and disabled; all checked by default. Unchecking any shows the caption "Practice run: won't clear the level", and the clear rule reads "Practice run". |
 | Buttons | "PLAY" (hero), "Regenerate", "Back" | Regenerate draws a new seed |
+
+### 2b. Campaign plan (Autopilot)
+
+| Field | Description | Constraints |
+| --- | --- | --- |
+| Screen title | "CAMPAIGN PLAN" + JP 作戦 | Display `h1` |
+| Campaign ID | Unique reference | `CMP-YYYYMMDD-NNN`; copyable |
+| Settings line | Target · DUT · scope · budget · ceiling | ≤ 100 chars |
+| Planned games | Next `CONFIG.autopilot.planLength` picks | Ordered list. Per row: game or level (+ subset), difficulty, reason (≤ 80 chars), source chip (`Ladder order` / `Retest` / `Best record` / `Explore` / `Escalate`), break score (2 dp or "new"). Row buttons: Remove, Up, Down, Pin. |
+| Method note | How picks are made | Exactly: "Ladder order and retests first, then best break score with an exploration bonus (UCB)." |
+| Buttons | "START CAMPAIGN" (hero), "Switch to Manual", "Back" | Switch to Manual opens the Lobby in Manual with the first planned game pre-selected |
 
 ### 3a. Arena header
 
@@ -148,7 +180,12 @@ The site is a single-page app with hash routes. The shell is always present.
 | Branch coverage (Ladder) | Branches passed | `n / N` + %, mono; thin bar in `--accent-hisui`; hidden for stress games |
 | Workflow step (Ladder) | Position in the current workflow | `WF-11 · step 4 / 10`, mono, `--text-2`; hidden on mobile |
 | Game state badge | `RUNNING` / `ESCALATING` / `STOPPED` / `DUT DOWN` / `CLEARED` | Colours: hisui / primary / text-2 / shu / hisui (with check icon) |
-| Stop button | "STOP" | Opens a confirm dialog: "Stop game and save run?" with "Stop" / "Keep playing" |
+| Stop button | "STOP" | Opens a confirm dialog: "Stop game and save run?" with "Stop" / "Keep playing". In Autopilot the dialog offers "Stop this game", "Stop campaign" and "Keep playing". |
+| Play mode badge | Who is choosing | `MANUAL` (neutral tag) or `AUTOPILOT · n / plan` (`--accent-fuji`) |
+| Why this game (Autopilot) | Reason for the current pick | ≤ 80 chars, caption, under the game name |
+| Campaign controls (Autopilot) | Skip · Pin · Take control | Secondary buttons. Skip ends this game as `STOPPED` (reason "Skipped by engineer") and moves on. Pin re-queues it after this one. Take control switches the campaign to Manual and keeps the current game running. |
+| Budget left (Autopilot) | Remaining budget | Mono, e.g. "05:12:40 · 2 of 3 failures left" |
+| Command bar (Arena) | In-game commands | Collapsed to an icon button in the header; opens a one-line bar. Accepts stop, skip, pin, take control, show the trace, switch to X next. |
 
 ### 3b. Cohort arena
 
@@ -197,17 +234,31 @@ The site is a single-page app with hash routes. The shell is always present.
 | Triggering moves | Last 5 moves | Move + timestamp, oldest first |
 | KPI snapshot | The game's 5 KPIs at end vs threshold | Breached rows marked in shu with an icon |
 | Log download | "Download logs" | Generates `run-<id>.json` client-side (ladder runs include branch results with workflow references, the step reached, and the library `schemaVersion`; every run includes `signallingTrace` with each entry's `librarySource`, SFN/slot time and `decode` (DCI, PHY, MAC PDU, NAS, SIP), plus `messageLibrary` and `nasLibrary` objects holding every RRC and NAS message referenced). IMSI/SUPI is masked to the last 4 digits throughout the file. |
-| Replay seed | Seed + agent version | Copyable |
+| Replay seed | Seed + agent version | Copyable (Autopilot runs add the campaign ID and decision number) |
+| Next game (Autopilot) | What plays next | Panel above the buttons: "Next: <game> · <reason>" with a `CONFIG.autopilot.countdownSec` countdown ring. "Pause campaign" stops it, and "Play now" skips the wait. After DUT DOWN the panel first shows "Recovering DUT…" (G24). When the budget is reached, routes to `#/campaign/:id` instead. |
+| Next in queue (Manual) | Next dictated game | "Next in queue: <game>" with a "Generate" button; no countdown |
 | Buttons | Depends on outcome | Default: "REPLAY" (hero), "New game", "View in History". After L1–L4 clear: "NEXT LEVEL" (hero), "Replay", "View in History". After L5 clear: "NEW GAME" (hero), "Replay", "View in History". |
+
+### 4b. Campaign Report
+
+| Field | Description | Constraints |
+| --- | --- | --- |
+| Banner | Outcome | "CAMPAIGN COMPLETE" (budget reached; hisui) or "CAMPAIGN STOPPED" |
+| Summary | Totals | Games played · run time · DUT failures · levels cleared · branches newly covered |
+| Failures found | Ranked by severity (DUT DOWN before failed branches, then by time to failure) | Table: run ID · game · failing KPI or workflow step · time; rows link to `#/gameover/:runId` |
+| Coverage | Before → after for this DUT build | Per level: `n / N → n / N` |
+| Decisions | Every pick | Table: # · game · source · reason · break score at the time |
+| Knowledge update | What changed | ≤ 120 chars |
+| Buttons | "Run again" (hero), "Download report", "View runs in History" | Download generates `campaign-<id>.json` client-side, including every decision and run ID |
 
 ### 5. Run History
 
 | Field | Description | Constraints |
 | --- | --- | --- |
 | Screen title | "HISTORY" + JP 履歴 | Display `h1` |
-| Table columns | Date · Game ID · DUT · Game · Difficulty · Duration · Outcome · Score | Newest first. Ladder rows show Game as "L1 Registration". |
+| Table columns | Date · Game ID · DUT · Target · Mode · Game · Difficulty · Duration · Outcome · Score | Newest first. Ladder rows show Game as "L1 Registration". |
 | Outcome badge | How the game ended | `DUT DOWN` / `STOPPED` / `LEVEL CLEAR` / `PLATFORM ERROR` (sample data only) |
-| Filters | Game (stress games + five ladder levels), Outcome, text search on DUT | Client-side |
+| Filters | Game (stress games + five ladder levels), Outcome, Target, Play mode, text search on DUT | Client-side. Autopilot runs are grouped under a campaign row (CMP ID · runs · failures) that expands; the campaign row links to `#/campaign/:id`. |
 | Row expand · score timeline | Score over time | Inline SVG line; x = elapsed, y = score |
 | Row action | "Open report" | Goes to `#/gameover/:runId` |
 | Empty state | Shown when filters match nothing | Exactly: "No runs match these filters." |
@@ -225,6 +276,9 @@ The site is a single-page app with hash routes. The shell is always present.
 | Workflow library | Loaded library | Panel titled "Workflow library": schema + version, technology, generated date, contents line (workflows · cases · steps · RRC messages · NAS PDUs), carrier, spec baseline, "10 defaults to verify" warning badge, 17 workflows (ID · name · case count · category), expandable "NAS timers · 5GS ↔ EPS" table, "TS 24.301 interworking" list with the GUTI mapping, and "Not covered yet" |
 | Datalake source | Capture source | "Embedded sample captures (N)" |
 | Ladder unlocks | Progressive or All unlocked (demo) | Segmented control; default Progressive. "All unlocked (demo)" opens every level for every DUT label without recording clears. |
+| Voice input | Show the mic in command bars | Toggle, off by default. Note: "In this demo, speech is recognised by your browser and may be processed by its vendor's cloud. Lab deployments use an on-premise engine." When unsupported, disabled with "Not supported in this browser". |
+| Autopilot knowledge | What Autopilot has learned | Table: target · DUT family · runs · failures · top 3 games (break score) · updated. "Reset" per row with confirm "Forget everything Autopilot learned about <family>?" |
+| Autopilot defaults | Scope, budget, ceiling | Same controls as the Lobby; used to pre-fill new campaigns |
 | Reset demo | "Clear session runs" | Clears in-memory and `localStorage` runs and ladder unlocks after a confirm |
 
 ---
@@ -236,7 +290,9 @@ The site is a single-page app with hash routes. The shell is always present.
 - **Routing.** Hash-based (`#/route`), handled by one `hashchange` listener, with no page reloads.
   - An unknown hash redirects to `#/lobby`.
   - Back and forward follow history normally.
-- **Flow.** Lobby → GENERATE → Briefing → PLAY → Arena → (Stop, DUT failure or Level clear) → Game Over.
+- **Flow.**
+  - **Manual:** Lobby → (click, chat or voice) → GENERATE → Briefing → PLAY → Arena → (Stop, DUT failure or Level clear) → Game Over → (next in queue).
+  - **Autopilot:** Lobby → PLAN CAMPAIGN → Campaign plan → START CAMPAIGN → Arena → Game Over (countdown) → Arena → … → Campaign Report when the budget is reached or the campaign is stopped.
 - **Briefing branch selection.** Clicking a branch row (or Enter/Space on it) selects it and swaps the message-flow panel without a route change; focus stays on the row.
 - **Ladder flow.** On a level clear, Game Over offers NEXT LEVEL. It generates the next level's testcase with the same target, DUT label and difficulty (new seed) and routes straight to Briefing.
 - **Unlocks.** A clear in Progressive mode marks the level `CLEARED` and the next level `OPEN` for that exact DUT label. A DUT failure or Stop changes no lock state.
@@ -244,6 +300,7 @@ The site is a single-page app with hash routes. The shell is always present.
   - `#/briefing` without a generated testcase redirects to `#/lobby`.
   - A testcase for a level that is locked for its DUT label can't be generated; if one is reached through history state, `#/briefing` redirects to `#/lobby`.
   - `#/arena` with no running game shows "No game running" and a "Go to Lobby" link.
+  - `#/plan` without a planned campaign redirects to `#/lobby`; an unknown campaign `:id` redirects to `#/history`.
   - An unknown `:runId` redirects to `#/history`.
 - **Leaving a running game.** Navigating away does **not** stop the game; it keeps ticking. Only STOP, a DUT failure or a level clear ends it.
 - **Active nav item.** Gets `aria-current="page"` and the active state from `design-standard.md` §5.4.
@@ -252,6 +309,8 @@ The site is a single-page app with hash routes. The shell is always present.
   - `Enter`/`Space` activate.
   - `Esc` closes dialogs and the mobile nav.
   - `S` opens the Stop dialog in the Arena.
+  - `/` focuses the command bar (Lobby and Arena).
+  - With the command bar focused and Voice input on, holding `Space` on an empty bar records; releasing it stops recording.
 - **Focus.**
   - On a route change, focus moves to the screen's `h1` (`tabindex="-1"`).
   - Dialogs trap focus and return it to the trigger on close.
@@ -340,6 +399,50 @@ Contract-specific rules:
 
 **Reduced motion** follows `design-standard.md` §5.6.
 
+| Trigger | Behaviour |
+| --- | --- |
+| Play mode switched | Lobby body cross-fades between the Manual and Autopilot field sets (`--dur-base`) |
+| Command understood | Interpretation chips slide in left to right with a 40 ms stagger; the matching Lobby controls flash their selected state once |
+| Listening | Mic ring pulses (reduced motion: static ring + "Listening…") |
+| Campaign plan updated | Changed rows cross-fade; reordering animates row position over `--dur-base` |
+| Autopilot countdown | Ring empties linearly over the countdown; reduced motion: number only |
+
+### 3.6 Play modes
+
+**Manual: one grammar, three inputs.** Clicks, chat and voice all write to the same Lobby state.
+- **Parsing.** A command is lower-cased and tokenised, then matched against `DATA.commands`. The deterministic rules, in order:
+  1. the target (gnb, ai-ran, modem);
+  2. the DUT label (text after "for" or "on" that isn't a known keyword);
+  3. the game type plus a game or level (number or name);
+  4. branches ("only …", or causes, codes or case IDs that match branch names or `wf` references in that level);
+  5. the difficulty;
+  6. a queue ("then", "and then", ",").
+- **Ambiguity.** If a token matches more than one slot value (e.g. "reject" in L1 and L2) or no level is given for a branch-only command, show the clarification instead of guessing.
+- **No match.** Leave the Lobby unchanged and show "Didn't understand. Try e.g. 'L1 on Hard'." (polite live region).
+- **Never auto-start.** A command only fills the Lobby (and the Briefing branch picker). GENERATE, PLAY and STOP still need their own confirmation. "stop" during a game opens the Stop dialog.
+- **Locked levels.** A command naming a locked level selects nothing and says "Level 3 is locked for <DUT>. Clear L2 first."
+- **Voice states.** `idle` → (press) `listening` → (release or 8 s silence) `transcribing` → transcript placed in the bar and parsed as chat → `idle`. An error ("Didn't catch that…") returns to `idle`. The recogniser runs only while the button is held or toggled on, never continuously.
+- **Practice runs.** A ladder run with any branch unchecked is saved with `practice: true`: branch results are reported, but the level is never marked cleared and nothing unlocks.
+
+**Autopilot: the campaign loop.**
+1. **Plan.** Build the candidate set for the scope (stress games × difficulties up to the ceiling, open ladder levels, and per-level subsets of branches that failed before). Apply the hard rules in order:
+   - the lowest uncleared open ladder level for this DUT build;
+   - retests of games and branches whose `failedOn` contains an earlier build of the same family;
+   - then UCB1 on the rest: `meanBreak + c·√(ln N / plays)`, with unplayed candidates scored ∞ and ties broken by the campaign seed.
+   Take the top `planLength` as the plan, each with its reason and source.
+2. **Play.** Generate and play the first planned game exactly as in Manual mode (same Briefing data, seed, engine and judging), with the Autopilot header fields.
+3. **Learn.** At the end of the game, compute the break value:
+   - the run's mean reward, normalised to 0–1;
+   - plus `failBonus` if the outcome is DUT DOWN;
+   - plus `branchFailBonus` per failed branch.
+   Update `plays`, `meanBreak`, `failedOn` and `qByMove` for the candidate, update ladder unlocks as in Manual, and append the decision to the campaign record.
+4. **Continue.** If the budget remains, recover the DUT (G24), re-plan (the plan can change after every game) and count down to the next game. Otherwise route to the Campaign Report.
+5. **Override.** Skip, Pin and Take control act immediately. Edits to the plan screen persist for the campaign. Take control ends the campaign record with reason "Taken over by engineer" and produces a Campaign Report of what ran.
+
+**Targets.** Both play modes work identically for gNB / AI-RAN and modem. The knowledge base key includes the target, so a gNB family and a modem family never share learning. Cold-start priors come from `CONFIG.autopilot.priors[target]`:
+- **gNB:** stress games first, then L3.
+- **modem:** L1/L2 failure branches first, then L3 RLF branches.
+
 ---
 
 ## 4. Open items carried from the content model
@@ -351,8 +454,9 @@ These values use placeholders in `CONFIG`, each marked `// PLACEHOLDER (Gn)`:
 - **G3:** difficulty parameters, including branch count per ladder difficulty.
 - **G4:** capture schema. The assumed shape is `id`, `location`, `date`, `feature`, `profile`.
 - **G13:** level-clear minimum run time per level and difficulty.
+- **G23:** Autopilot exploration constant, break-value bonuses, plan length, countdown, default budget and ceiling, and cold-start priors per target.
 
-Assumed without a placeholder: ladder unlocks are scoped to the exact DUT label and never expire (G14); the mock emulates three cells (G15); one representative UE is narrated per branch (G20); the `defaults.verify` areas are shown as warnings, not blocked (G18); L1 branch 1 is composed from WF-07c steps 1–30 and WF-06b steps 23–44, L1 branch 13 adapts WF-07b to cause #21, and L4 branches are tester-defined (G17).
+Assumed without a placeholder: ladder unlocks are scoped to the exact DUT label and never expire (G14); the mock emulates three cells (G15); one representative UE is narrated per branch (G20); the `defaults.verify` areas are shown as warnings, not blocked (G18); voice uses the browser recogniser, opt-in (G21); chat uses an in-page grammar (G22); the mock recovers the DUT instantly after a failure (G24); L1 branch 1 is composed from WF-07c steps 1–30 and WF-06b steps 23–44, L1 branch 13 adapts WF-07b to cause #21, and L4 branches are tester-defined (G17).
 
 Replacing any placeholder must need no code changes outside `CONFIG`.
 
@@ -386,7 +490,7 @@ Performance criteria (§5.7) are measured in Chrome on a mid-range laptop (4-cor
 | AC-S4 | No console errors or warnings | Console is clean across the full flow on every browser |
 | AC-S5 | Works with `localStorage` blocked | Private window or storage disabled: full flow works, including ladder unlocks within the session; session runs and unlocks simply don't persist |
 | AC-S7 | Workflow library embedded and checked | `DATA.workflows` deep-equals `5g_signalling_workflows.json`. Changing `schemaVersion` to `4.0.0` (or removing `messageLibrary` or `nasLibrary`) makes ladder mode show "Workflow library version not supported" in the Lobby, with no console errors and stress games still playable. |
-| AC-S6 | Placeholders isolated | All G1–G4 and G13 values sit in `CONFIG` with `// PLACEHOLDER (Gn)` comments. Changing one threshold changes behaviour with no other edits. |
+| AC-S6 | Placeholders isolated | All G1–G4, G13 and G23 values sit in `CONFIG` with `// PLACEHOLDER (Gn)` comments. Changing one threshold changes behaviour with no other edits. |
 
 ### 5.3 Navigation and flow
 
@@ -441,6 +545,25 @@ Performance criteria (§5.7) are measured in Chrome on a mid-range laptop (4-cor
 | AC-C35 | Library v3 coverage | Every L1–L3 and L5 branch resolves without `?`; L1 baseline is WF-13a; L1 branch 13 and L5 branches 4–6 are tagged "Adapted"; L5 "RLF during active call" plays WF-03 then WF-12 ("Composed"); every workflow WF-01 to WF-17 is referenced by a branch or stress move |
 | AC-C36 | NAS decoded | Selecting REGISTRATION REQUEST shows "TS 24.501 8.2.6", a TS 24.301 equivalent, an IE table including "5GS registration type" and an "Absent (OPTIONAL)" list; a protected NAS message (e.g. SECURITY MODE COMMAND in WF-13a) shows the NAS security block and the protected hex |
 | AC-C21 | Failure on a ladder level | A DUT failure during a level routes to "DUT DOWN" with branch results showing Passed / Failed / Not reached, and does not change any lock state |
+
+### 5.4b Play modes
+
+| ID | Criterion | Check |
+| --- | --- | --- |
+| AC-P1 | Play mode switch | Lobby shows Manual / Autopilot above everything else; Manual is default; switching keeps target and DUT label and swaps the field sets with no layout jump |
+| AC-P2 | Chat fills the Lobby | Typing "L1 registration on Hard for gNB-X sw 4.2.1" + Enter sets Procedure Ladder, L1, Hard and the DUT label, shows the interpretation chips, and does **not** navigate or start anything |
+| AC-P3 | Branch subset by command | "L1, only REJECT #22 and T3510" + GENERATE opens the Briefing with only the baseline, REJECT #22 and No response · T3510 checked, and the clear rule reads "Practice run" |
+| AC-P4 | Ambiguity asks | "play reject" with no level shows a clarification with L1 and L2 choices and changes nothing until one is picked |
+| AC-P5 | Locked level refused | With Progressive unlocks and a fresh DUT label, "play L3" selects nothing and shows the locked message |
+| AC-P6 | Queue | "L1 then L2 on Easy" shows two queue chips; after L1 ends, Game Over offers "Next in queue: L2 · Easy" |
+| AC-P7 | Voice (where supported) | With Voice input on in Chrome, holding the mic shows "Listening…"; the transcript lands in the bar and is parsed exactly like typed text. With Voice input off (default) or in an unsupported browser, no mic is shown and no recogniser is created |
+| AC-P8 | Stop by command | During a game, "stop" in the Arena command bar opens the Stop dialog; the game keeps running until it is confirmed |
+| AC-P9 | Campaign plan | Autopilot + PLAN CAMPAIGN on a fresh DUT label shows 5 planned games, the first being L1 (Ladder order), each with a reason and source; Remove, Up/Down and Pin change the plan |
+| AC-P10 | Campaign runs unattended | START CAMPAIGN with a 00:05 budget plays games back to back with the Autopilot badge, reason and budget in the header; after each game the countdown starts the next one; at budget end, the Campaign Report appears |
+| AC-P11 | Retest first | With a sample run where "SERVICE REJECT #22" failed on sw 4.2.1, a campaign for the same family on sw 4.2.2 lists that branch as a Retest within the first two picks |
+| AC-P12 | Overrides | Skip saves the current run as STOPPED "Skipped by engineer" and plays the next pick; Take control switches to Manual with the game still running; Stop campaign routes to the Campaign Report |
+| AC-P13 | Both targets | Manual (chat) and Autopilot each run end to end with target gNB / AI-RAN and with target Modem; knowledge rows are separate per target in Settings |
+| AC-P14 | Deterministic campaign | The same knowledge base + campaign seed produces the same plan and decisions; the campaign download lists every decision with its inputs |
 
 ### 5.5 Behaviour and visual conformance
 
