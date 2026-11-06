@@ -1,8 +1,11 @@
 # Test Arena — Content Model (Must-Have / MVP)
 
-*Companion to the Anritsu AI-RAN Test Arena PRD v1.2 · 2 Nov 2026*
+*Companion to the Anritsu AI-RAN Test Arena PRD v1.9 · 6 Nov 2026*
 
 > **Change log**
+> - **6 Nov 2026 (v1.9.1):** The static build now uses the bundle. Lake sessions are source captures on the Briefing (LAKE tag, matched workflow), and Settings has a Field-data lake panel with bundle import. G29 is narrowed to field replay (S9) and RF-driven pressure.
+> - **6 Nov 2026 (v1.9):** Field-data lake (PRD M15). New §8 covers the fields of the `test-arena.field-data` bundle the lake exports. Source captures on the Briefing map onto lake sessions. G4 is narrowed: the demo schema exists, but the production access path is still open. New gaps G29–G32. No new screen.
+> - **4 Nov 2026 (v1.8):** Network model (PRD M14). New screen 7 (import, report, parameter editor, impact preview), a fifth nav item, "Model" marks on changed values in the Briefing message flow, trace inspector, Game Over and logs, the network model on the Briefing and in run records, the workflow library at schema 3.1.0 with `networkParameters`, and gaps G25–G28.
 > - **4 Nov 2026 (v1.7):** Play modes (PRD M12, M13). **Manual:** the Lobby is driven by click, chat command or voice, with interpretation chips and a branch picker. **Autopilot:** campaign scope, budget and plan preview, an Autopilot banner in the Arena with Skip, Pin and Take control, a next-game countdown on Game Over, a Campaign Report screen, play-mode filters in History, and Voice and Autopilot knowledge controls in Settings. New gaps G21–G24.
 > - **4 Nov 2026 (v1.5):** Workflow library v3 (schema 3.0.0): NAS messages are library steps with their own decode (NAS library: TS 24.501 clause, IE table, absent IEs, security header, protected PDU, TS 24.301 equivalent); RRC steps name the NAS they carry; Settings lists the 5GS↔EPS timer and interworking tables; branch sets grow to L1 19, L2 14, L3 12, L5 15.
 > - **3 Nov 2026 (v1.4):** Workflow library v2 (schema 2.0.0): message flows include PHY/MAC steps with a Signalling / All layers toggle; trace rows carry SFN/slot; the inspector decodes DCI, PDSCH/PUSCH/PUCCH/PRACH, MAC PDUs, RRC ASN.1 (UPER hex, IE tree, absent IEs), NAS PDUs and SIP; a PHY · MAC filter; IMSI masked in hex; 10 verification areas.
@@ -13,7 +16,7 @@
 
 ## Page order
 
-The MVP needs seven screens plus a persistent shell. Each maps to Must-Haves M1–M13 and to nothing else.
+The MVP needs eight screens plus a persistent shell. Each maps to Must-Haves M1–M14 and to nothing else. M15 (field-data lake) has no screen of its own: it supplies the Briefing's source captures (§2) through the bundle in §8.
 
 0. **App shell**: persistent top bar on all screens
 1. **Game Lobby**: choose play mode (Manual or Autopilot), target and DUT; in Manual, the game or ladder level and difficulty by click, chat or voice; in Autopilot, the campaign scope and budget (M1, M10, M12, M13)
@@ -23,6 +26,7 @@ The MVP needs seven screens plus a persistent shell. Each maps to Must-Haves M1�
 4b. **Campaign Report**: what an Autopilot campaign found and decided (M13)
 5. **Run History**: saved games and replay (M9)
 6. **Instrument Settings**: adapter connection and workflow library (M8, M11)
+7. **Network model**: import, map, edit and apply an operator's or RAN vendor's parameters (M14)
 
 ### Shared rules for every field
 
@@ -34,6 +38,7 @@ The MVP needs seven screens plus a persistent shell. Each maps to Must-Haves M1�
 - **Identifiers** (IMSI/SUPI) are masked to the last 4 digits wherever they are shown.
 - **Game names.** Stress games use their name ("Signalling Storm"). Ladder levels use `L<n> <Procedure>` ("L1 Registration", "L5 IMS Call") wherever space is tight, and "Level 1 · Registration" / "Level 5 · IMS Voice & Video" elsewhere.
 - **Workflow references.** Written as the workflow ID plus case, variant or cause, separated by " · ": `WF-07 · #22`, `WF-08a`, `WF-12c`. Shown in JetBrains Mono. Never invent an ID; tester-defined branches show `—`.
+- **Model values.** A value that comes from the network model instead of the library is shown with the library value beside it (struck through) and a "Model" tag. Message names are never changed by a model; only IE values and step times are.
 - **Message names** are copied exactly from the library (`REGISTRATION REQUEST`, `RRCSetupRequest`, `486 Busy Here`), never reworded. Direction is shown as UL ↑, DL ↓, SS ⚑ or UE ●.
 
 ---
@@ -43,7 +48,7 @@ The MVP needs seven screens plus a persistent shell. Each maps to Must-Haves M1�
 | Field | Format | Description | Constraints |
 | --- | --- | --- | --- |
 | Product name | Text | "Test Arena" wordmark + Anritsu logo | Fixed; brand green only here |
-| Nav items | Text ×4 | Lobby · Arena · History · Settings | 1 word each; Arena disabled when no game runs |
+| Nav items | Text ×5 | Lobby · Arena · History · Network · Settings | 1 word each; Arena disabled when no game runs |
 | Adapter status | Badge | Connection to instrument | Enum: `LIVE` / `SIMULATED` / `OFFLINE`; always visible |
 | Active game indicator | Badge | Game ID + elapsed time when a game runs | `PLAY 042 · 01:23:45`; links to Arena |
 
@@ -85,15 +90,16 @@ The MVP needs seven screens plus a persistent shell. Each maps to Must-Haves M1�
 | Game model | Text | The game-theory model the agent uses | ≤ 40 chars, e.g. "Stackelberg · leader–follower" (stress games) or "Sequential game · subgame perfection" (L1) |
 | Model explainer | Text | What the model means for this test | ≤ 140 chars, instrument tone; one per game, from the PRD catalogue |
 | Branch set (Ladder only) | Ordered list | Branches the agent must cover to clear the level | 4–18 items; name ≤ 40 chars; each row shows its workflow reference (`WF-07 · #22`, or `—` if tester-defined); count depends on difficulty; one row is selected (baseline by default) |
-| Message flow (Ladder only) | Step list + toggle | The selected branch's workflow steps | 5–155 steps (initial registration 129, VoNR 141); toggle "Signalling (n)" (default: RRC, NAS, SIP, UE events, test-system actions) / "All layers (n)" (adds DCI, PDSCH/PUSCH, HARQ-ACK, SR, PRACH, gNB decode); per step: seq, direction, layer, message (≤ 56 chars), container for NAS steps (≤ 48 chars, e.g. "RRCSetupComplete.dedicatedNAS-Message", "DL NAS TRANSPORT Payload container in RRCReconfiguration"), note, timers (`T3510 ▶` start, `■` stop, `✕` expired, `…` running); the injection step is marked "Injection"; tags "Adapted" (value differs from the library message), "Response matrix", "Composed" (flow joined from library flows, with a "from WF-xx" rule at each join; only L5 "RLF during active call") |
+| Message flow (Ladder only) | Step list + toggle | The selected branch's workflow steps | 5–155 steps (initial registration 129, VoNR 141); toggle "Signalling (n)" (default: RRC, NAS, SIP, UE events, test-system actions) / "All layers (n)" (adds DCI, PDSCH/PUSCH, HARQ-ACK, SR, PRACH, gNB decode); per step: seq, direction, layer, message (≤ 56 chars), container for NAS steps (≤ 48 chars, e.g. "RRCSetupComplete.dedicatedNAS-Message", "DL NAS TRANSPORT Payload container in RRCReconfiguration"), note, timers (`T3510 ▶` start, `■` stop, `✕` expired, `…` running); the injection step is marked "Injection"; tags "Adapted" (value differs from the library message), "Response matrix", "Composed" (flow joined from library flows, with a "from WF-xx" rule at each join; only L5 "RLF during active call"), "Model" (an IE value or the step time comes from the network model; the note names the parameters or the re-timing) |
 | Expected behaviour (Ladder only) | Text | What the DUT must do for the selected branch to pass | ≤ 200 chars, from the library in this order: matrix row `expectedUE`; the injection step's `expect`; the next UE-event step (timer expiry first); the next UL NAS summary; `passCriteria` |
 | Spec baseline | Text | Specs the workflow library is baselined on | Every TS number in `specBaseline`, e.g. "TS 38.331 · 38.508-1 · 38.212 · 38.321 · 38.213 · 38.214 · 38.211 · 24.501 · 24.229 · 34.229-1" |
 | Defaults to verify | Badge + count | Configuration areas in the library's `defaults.verify` | Integer; warning badge when > 0, e.g. "10 defaults to verify"; tooltip lists the first 3 |
 | Clear rule (Ladder only) | Text | What clears the level | ≤ 80 chars, e.g. "Pass all 7 branches with no DUT failure, min 05:00" |
 | Cohort mix | 3 numbers + bar | UE counts per slice | URLLC / eMBB / mMTC; integers; total ≤ 60,000 |
-| Source captures | List | Datalake captures used to seed the testcase | 1–5 items: capture ID, location, date; no subscriber IDs |
+| Source captures | List | Datalake captures used to seed the testcase | 1–5 items: capture ID, location, date; no subscriber IDs. From the field-data lake: capture ID = session `id`, location = `area`, date = `start` (date part); the matched workflow (`wf`) may follow in mono |
 | Stop conditions | List | What ends the game | Always "User Stop" + the game's failure rules (see G1); ladder levels add "Level clear" |
 | Generation time | Mono number | Proof of the < 2 s target | Seconds, 2 decimals |
+| Network model | Text + tag + link | Which parameters the flows use | Model name (≤ 40 chars) + "n parameters" + fingerprint (8 hex) and a "Model" tag, or "Library defaults"; "Edit" link to screen 7 |
 | Branch picker (Manual, Ladder) | Checkbox list | Play a subset of the level's branches | Baseline always checked and locked; ≥ 1 other branch; a subset run shows "Practice run: won't clear the level" (≤ 50 chars) |
 | Actions | Buttons | Start or go back | "PLAY" (primary), "Regenerate", "Back" |
 
@@ -182,7 +188,8 @@ The screen has four zones. All live values update at 10–20 Hz.
 | Inspector · NAS PDU | Key–value + hex + table | Message with TS 24.501 clause, procedure, decoded summary, TS 24.301 equivalent, carried-in container, `nasLibrary` reference and length; plain PDU hex; IE table (IE · IEI · length · value tree); "Absent (OPTIONAL)" list; contained messages; NAS security block (security header type, MAC placeholder, sequence number, NAS COUNT, ciphering) with the protected PDU hex as carried | A played cause-matrix row shows a "Cause matrix" tag, its hex, and a note that the IE table is the library's own message; adapted PDUs (#21) show an amber "Adapted" tag; IMSI/SUPI digits masked except the last 4 in hex, IE values and summaries |
 | Inspector · Carries NAS | Text | On an RRC step that carries NAS: the NAS message names and where their row is | — |
 | Inspector · SIP | Key–value + block | Headers and SDP lines, size in bytes | IMSI-based IMPU masked |
-| Inspector · Annotation | Text | Step note, library note, "Adapted: …" (amber) | — |
+| Inspector · Model values | Inline | IE values the network model changed | New value, library value struck through, "Model" tag; one line above the tree: "Network model: n values below differ from this library encoding (…). The hex is the library's." Decoded with the model the entry was recorded with |
+| Inspector · Annotation | Text | Step note, library note, "Adapted: …" (amber), "Network model: …" (timer re-timed, procedure switched) | ≤ 200 chars each |
 | Buffer | — | Live trace length | Last 600 messages kept; last 260 rows rendered; 220 saved per run (trace kept for the 10 newest saved runs) |
 
 ### 3d. Diagnostics strip (always visible)
@@ -224,8 +231,9 @@ This screen appears when the DUT fails, the user stops the game, or a ladder lev
 | Triggering moves | Ordered list | Last 5 moves before the end | Move + timestamp, oldest first |
 | KPI snapshot | Table | All 5 KPIs at the end vs threshold | Same KPI set and units as that game's Diagnostics strip |
 | Signalling trace | Section | Last 160 messages of the run, same rows and inspector as the Arena | Auto-selects the last wrong or missing DUT response, else the last DUT response; "DUT responses only" filter |
-| Log capture | File link | Logs + game state for the last N seconds | Default N = 30 s; download as .zip; IMSI masked |
+| Log capture | File link | Logs + game state for the last N seconds | Default N = 30 s; download as .zip; IMSI masked; includes the network model (name, fingerprint, changed parameters) and, per trace entry, the IE values it changed |
 | Replay seed | Mono | Seed + agent version for exact replay | Copyable |
+| Network model | Text | The model the run used | Name + fingerprint, or "Library defaults"; "Replay uses the active model" when it differs |
 | Next game (Autopilot) | Countdown + text | What the campaign plays next | "Next: <game> · <reason>" with a 10 s countdown; "Pause campaign" stops the countdown; after a DUT failure it first shows "Recovering DUT…" until the adapter reports it ready |
 | Actions | Buttons | Next step | Default: "REPLAY", "New game", "View in History". After a level clear: "NEXT LEVEL" (primary), "Replay", "View in History"; after clearing L5: "New game" replaces "NEXT LEVEL". |
 
@@ -265,25 +273,90 @@ Shown when an Autopilot campaign ends (budget reached or Stop).
 | Test connection | Button + result | Checks reachability | Result: OK / error text ≤ 80 chars |
 | Max UEs available | Mono (read-only) | Licence/hardware limit | Integer ≤ 60,000; caps the Lobby |
 | Emulated cells | Mono (read-only) | Cells available for Level 3 | Integer; 3 required for L3 (two in one TA, one in a second TA) |
-| Workflow library | Panel | The loaded `5g_signalling_workflows.json` | Schema name + version (`test-arena.signalling-workflows` 3.0.0), technology, generated date, contents ("17 workflows · 29 cases · 1927 steps · 107 RRC messages (UPER) · 92 NAS PDUs"), carrier (band · duplex · SCS · PRBs · TDD pattern), spec baseline, "10 defaults to verify", workflow list (ID · name · case count · category), expandable "NAS timers · 5GS ↔ EPS (14)" table (5GS timer, default, start, stop, TS 24.301 timer), "TS 24.301 interworking (10)" list with the 4G-GUTI → 5G-GUTI mapping, and "Not covered yet (6)" |
-| Datalake source | Text input | Endpoint for field captures | URL; read-only access only |
+| Workflow library | Panel | The loaded `5g_signalling_workflows.json` | Schema name + version (`test-arena.signalling-workflows` 3.1.0), the active network model with a link to screen 7, technology, generated date, contents ("17 workflows · 29 cases · 1927 steps · 107 RRC messages (UPER) · 92 NAS PDUs"), carrier (band · duplex · SCS · PRBs · TDD pattern), spec baseline, "10 defaults to verify", workflow list (ID · name · case count · category), expandable "NAS timers · 5GS ↔ EPS (14)" table (5GS timer, default, start, stop, TS 24.301 timer), "TS 24.301 interworking (10)" list with the 4G-GUTI → 5G-GUTI mapping, and "Not covered yet (6)" |
+| Datalake source | Text input | Endpoint for field captures | URL; read-only access only. In the static build: a read-only line naming the active field-data bundle and the sample captures |
+| Field-data lake | Panel + table + file import | The active field-data bundle and its sessions | Bundle, source, generated, mapped-against library, contents; one row per session (ID, area, start, workflow + score, events + share of RRC/NAS/SIP mapped, RF points, games it seeds); "Import bundle…" (`.json`, ≤ 5 MB), "Use embedded bundle" |
 | Ladder unlocks | Toggle | How ladder levels open | Enum: `Progressive` (default) / `All unlocked (demo)` |
 | Voice input | Toggle + note | Whether the mic appears in command bars | Off by default; note ≤ 120 chars on where audio is processed (on-premise engine, or the browser's recogniser in the demo); disabled with "Not supported in this browser" when unavailable |
 | Autopilot knowledge | Table + action | What Autopilot has learned | One row per target · DUT family: runs, failures, top 3 games by break score, last updated; "Reset" per row (confirm: "Forget everything Autopilot learned about <family>?") |
 | Autopilot defaults | Controls | Default scope, budget and ceiling for new campaigns | Same enums as the Lobby |
 
+## 7. Network model (M14)
+
+| Field | Format | Description | Constraints |
+| --- | --- | --- | --- |
+| Screen title | Arcade | "NETWORK MODEL" + JP ネットワーク | ≤ 3 words |
+| Lede | Text | What a network model does | ≤ 260 chars |
+| Active model · status | Badge | Whether a model is applied | `MODEL` (with sliders icon) or `LIBRARY DEFAULTS` |
+| Active model · name | Text | From the file (`name`, `modelName`, root `name` attribute) or the file name | ≤ 60 chars |
+| Active model · source | Text | `vendor` / `operator` from the file | ≤ 60 chars; hidden when absent |
+| Active model · file | Mono | File name · format | `JSON`, `XML` or `Manual` |
+| Active model · applied | Mono | When it was applied | `DD MMM YYYY HH:MM` |
+| Active model · parameters | Mono | How many differ | "n of 37 differ from the library" |
+| Active model · fingerprint | Mono | Hash of the changed parameters | 8 hex, or `library`; copyable |
+| Import · drop zone | File input | JSON or XML file | `.json`, `.xml`; ≤ 5 MB; click, keyboard or drag and drop |
+| Import · samples | Chips | Two built-in fictional files | "Operator A · dense urban (JSON)", "Vendor B · NRM bulk CM export (XML)" |
+| Import · error | Text | Why a file could not be read | ≤ 120 chars, e.g. "Not valid XML: …", "No parameter in x.json matches the workflow library (n entries read)." |
+| Import report · counts | Badges | Result per status | Mapped (jade) · Converted (cyan) · Rejected (vermilion) · Not mapped · Duplicate (neutral) |
+| Import report · rows | Table | One row per entry read | Source key (≤ 32) + path (≤ 48) · source value (≤ 24) · parameter label · applied value with unit · status + note (≤ 140, e.g. "600 ms → ms600", "7000 is not a TS 38.331 value for t311 (…)", "No binding in the workflow library"); first 60 rows, then "Show all n" |
+| Signalling impact | Mono + list + table | What the model changes | Summary "n parameters · n IE values in n messages · n workflows · n timer expiries retimed"; procedure changes (workflow #step, message ≤ 40, note); changed IE values (workflow #step + message, IE path last two levels ≤ 46, library → model); first 24 rows; "preview" while staged |
+| Parameters · group | Row header | Catalogue group | 9 groups from `networkParameters` |
+| Parameters · row | Row | One catalogue parameter | Label (IE name, mono) + spec reference (caption) · library default · model value (select for enumerations and booleans, input otherwise, unit beside) · status "Model" / "Library"; inline error ≤ 100 chars on an invalid value |
+| Actions | Buttons | Apply or discard the staged model | "APPLY TO SIGNALLING FLOW" (hero; disabled with nothing staged), "Discard changes", caption "n parameters staged from <file>." |
+| Model actions | Buttons | Manage the active model | "Export model" (JSON), "JSON template", "XML template", "Reset to library defaults" (confirm: "Reset to library defaults?") |
+
+**Parameter catalogue** (from `networkParameters`; values and ranges per TS 38.331 / TS 24.501)
+
+| Group | Parameters |
+| --- | --- |
+| Cell identity | MCC, MNC, Cell 1/2/3 PCI, TAC · Cells 1–2, TAC · Cell 3, SSB ARFCN |
+| Cell selection & paging | q-RxLevMin (dBm), defaultPagingCycle |
+| RRC timers and constants (SIB1) | t300, t301, t310, n310, t311, n311, t319 |
+| Connection control | waitTime (T302, s), t304 |
+| Random access | prach-ConfigurationIndex, preambleReceivedTargetPower, preambleTransMax, powerRampingStep, ra-ResponseWindow, ra-ContentionResolutionTimer |
+| Mobility (event A3) | a3-Offset (dB), hysteresis (dB), timeToTrigger, reportInterval |
+| Security | Ciphering algorithm (nea0–3), Integrity algorithm (nia0–3) |
+| NAS timers (network-signalled) | T3512, T3502, T3346 (s; GPRS-timer encodable) |
+| Slicing and features | S-NSSAI SST, IMS voice over PS (3GPP), Interworking with N26 |
+
+---
+
+## 8. Field-data bundle (M15, data only)
+
+The field-data lake (`field_lake/`) exports `fieldData.min.json` / `fieldData.js`. The static build embeds it as `FIELD_DATA` (`field_lake/embed_bundle.py`) or imports it from Settings. The Briefing shows its sessions as source captures, and the Settings panel lists them. These are the content rules any screen showing it must keep. Column names and types for the lake's own tables are in `field_lake/schema.sql`.
+
+| Field | Format | Description | Constraints |
+| --- | --- | --- | --- |
+| `schema` / `schemaVersion` | Text | Bundle identity | `test-arena.field-data`, `0.1.0`; a reader rejects any other schema name and any major version it does not know |
+| `generated` | ISO 8601 | Export time | Local time, seconds |
+| `libraryVersion` | Mono | Workflow library the messages were mapped against | Must equal `DATA.workflows.schemaVersion`; otherwise `lib` and `wf` are shown as "mapped against library x.y.z" |
+| Session · `id` | Mono | Lake session ID | ≤ 24 chars, e.g. `S-001`; shown as the capture ID |
+| Session · `campaign`, `dut`, `dutFamily`, `target`, `band`, `area`, `notes` | Text | Manifest metadata | `target` is `gnb` or `modem`; `dutFamily` uses the Autopilot family key; `area` ≤ 40 chars; `notes` ≤ 120 chars; no subscriber IDs |
+| Session · `start` / `end` | ISO 8601 | Span of the session's events and RF samples | Milliseconds |
+| Session · `wf` / `wfScore` | Mono + number | Closest library workflow and Jaccard match score | Workflow ID or `null`; score 0–1, shown as a percentage. A match is a resemblance, not a verdict |
+| Session · `events` | `{cols, rows}` | Signalling events in time order | Columns `tMs, layer, dir, message, lib, sfn, slot`; ≤ 400 rows by default (mapped messages kept first). `message` is the tool's spelling; `lib` is the library name and is the one to display when present |
+| Session · `rf` | `{cols, rows}` | RF timeline, bucket-averaged | Columns `tMs, lat, lon, rsrp, rsrq, sinr, cqi, mcs, blerPct, dlMbps, ulMbps`; ≤ 300 rows by default; units dBm, dB, %, Mbit/s; lat/lon to 6 decimals, others to 2; `rfStep` = raw samples per point |
+| Session · `iq[]` | Object | I/Q capture summary | `centerFreqHz`, `sampleRateHz`, `durationS`, `meanPowerDbfs`, `paprDb`, `psdPeakHz` and `psdDb` (64 bins, −fs/2 to +fs/2). Never samples |
+| `fadingProfiles[]` | Object | Fading condition and its taps | `id`, `family` (`TDL`, `CDL`, `measured`), `name`, `delaySpreadNs`, `dopplerHz`, `speedKmh`, `carrierGhz`, `los`, `kFactorDb`, `notes`; `taps` columns `delayNs, powerDb, aodDeg, aoaDeg, zodDeg, zoaDeg` (angles `null` for TDL). Synthetic profiles say so in `notes` |
+| Whole bundle | File | Size budget | Warning above 2 MB; the default caps keep a 3-session bundle near 60 KB |
+
+Rules shared with the rest of the app:
+- **Identifiers.** IMSI, SUPI, IMEI and SIP and tel numbers are already masked to the last 4 digits (`•` for each hidden digit), so they are shown as they are.
+- **Message names.** Use the library spelling (`lib`) wherever it exists.
+- **Units.** Every RF value is shown with its unit.
+
 ---
 
 ## Gaps between the PRD and the content model
 
-Four gaps (G1–G4) and the new G13 block MVP content. The rest can be settled during the build.
+Three gaps (G1–G3) and G13 block MVP content. G4 no longer blocks it, now that the field-data lake defines a demo schema. The rest can be settled during the build.
 
 | # | Gap | Where it bites | Fix in PRD | Blocks MVP? |
 | --- | --- | --- | --- | --- |
 | G1 | **Failure rules are undefined.** The PRD says "crash, KPI breach, assert" but gives no per-game thresholds. This now includes the five ladder KPI sets. | Stop conditions, threshold markers, Failure reason | Add a per-game failure table (KPI, threshold, duration) | Yes |
 | G2 | **The score and reward formula is undefined.** No weights are set for reject, latency or drop, or for the ladder reward components. | Reward, Reward breakdown, Total score | Define the reward function and score scale per game | Yes |
 | G3 | **Difficulty levels have no parameters.** For ladder levels this includes the branch-set size per difficulty. | Difficulty hint, Cohort mix, Branch set | Map each level to UE count, burst rate, move set and branch count | Yes |
-| G4 | **The datalake schema is unknown.** This is already an open question in the PRD. | Source captures, Datalake source | Confirm capture ID, metadata and access method | Yes |
+| G4 | **The datalake access path is unknown.** The field-data lake demo (M15) now defines the schema: a capture is a lake session with an ID, metadata and a matched workflow (`field_lake/schema.sql`, bundle in §8). Production hosting, access method and retention are still open in the PRD. | Source captures, Datalake source | Confirm hosting and the read-only access method with the data team | No (demo schema defined; the static build reads lake sessions alongside the sample captures) |
 | G5 | **The PRD has no DUT identity**, but history and replay need one. | DUT label (added to Lobby) | Add a DUT label/build field to M1 | No (added here) |
 | G6 | **Mock vs real mode isn't visible to users.** The PRD ships a mock adapter but has no rule for showing it. | Adapter status badge | Require a `SIMULATED` badge whenever mock is active | No (added here) |
 | G7 | **Copy tone isn't specified.** The Design Standard covers visuals only. | All text fields | Adopt the two-register rule (Arcade / Instrument) above | No |
@@ -304,3 +377,11 @@ Four gaps (G1–G4) and the new G13 block MVP content. The rest can be settled d
 | G22 | **Chat command scope is undefined.** It could be a constrained grammar over the library vocabulary or a local language model. | Command bar, Interpretation chips, Clarification | Freeze the command grammar and reference test set (200 commands); decide later on a local model | No (grammar assumed) |
 | G23 | **Autopilot numbers and knowledge scope are placeholders.** Exploration constant, break-value weights, default budget, and whether priors are shared across DUT families or customers. | Campaign plan, Knowledge summary, Settings | Set the UCB constant and break-value weights; decide knowledge sharing (assumed: per deployment, per target and DUT family, never across customers) | No (placeholders in `CONFIG`) |
 | G24 | **DUT recovery after a failure is instrument-specific.** Autopilot needs to reboot or reset the DUT to continue unattended. | Next game countdown ("Recovering DUT…"), Campaign Report | List which instruments and DUTs support automated recovery; otherwise the campaign pauses for the engineer | No (mock recovers instantly) |
+| G25 | **Vendor naming is open-ended.** Aliases cover TS 38.331 IE names, TS 28.541 NRM attributes and common vendor-style spellings, but every vendor export differs (units, scaling, managed-object layout). | Import report "Not mapped" rows | Maintain an alias and scaling table per vendor and customer (S2) | No (unmapped keys are reported, never guessed) |
+| G26 | **Only 37 parameters are bound.** RLC/PDCP timers, DRX, QoS/5QI and GBR, SSB periodicity, TDD pattern and CORESET are not yet in `networkParameters`. | Parameter editor, import report | Extend `netparams.py`; parameters that change encodings or message sizes need a library rebuild | No |
+| G27 | **Hex is not re-encoded.** The static build shows library UPER and NAS hex and marks model values in the decoded tree; the adapter must re-encode. | Inspector hex blocks, log `decode` | Decide whether the host re-encodes with the ASN.1/NAS encoders | No (flagged in the inspector) |
+| G28 | **The simulation effect of parameters is a placeholder.** How A3 tuning, RACH and RRC timers shift cohort pressure is a bounded model (±20%), not measured behaviour. | Arena KPIs under a model | Calibrate against reference DUTs | No (`nmLoadFactors` documented) |
+| G29 | **The bundle only seeds captures so far.** Lake sessions are Briefing source captures and are listed in Settings (contract v9.2). Field replay (S9) and RF-driven cohort pressure do not use the events, RF timeline or fading profiles yet. | Arena, Briefing | Specify field replay and the RF-to-pressure rule | No (captures and Settings built) |
+| G30 | **UE log formats vary by tool.** QXDM, Nemo and TEMS store proprietary binaries; the lake reads their decoded CSV exports through column aliases. | Signalling events, session match | Pick the first tools, and maintain an alias table per tool | No (aliases in each ingest script) |
+| G31 | **PCAP decoding depends on the lab.** Full NGAP and NAS decoding needs Wireshark (`tshark`), and ciphered NAS needs keys. Without them only SIP and NGAP procedure names are read. Direction comes from a heuristic (first SIP request sender = UE). | Signalling events from PCAP | Confirm Wireshark and key availability per customer lab | No (built-in reader fallback) |
+| G32 | **The fading and channel samples are synthetic.** They use an exponential delay profile, not TR 38.901 tables or measured data. | Fading profiles, channel taps | Load TR 38.901 TDL/CDL tables or measured profiles | No (marked synthetic in `notes`) |

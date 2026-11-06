@@ -1,8 +1,10 @@
 # Anritsu AI-RAN Test Arena — Product Requirements Document
 
-*v1.7 · 4 Nov 2026 · Marsh Dsouza*
+*v1.9 · 6 Nov 2026 · Marsh Dsouza*
 
 > **Change log**
+> - **v1.9 (6 Nov 2026):** Added the **field-data lake** (new Must-Have M15) that M2 draws its captures from. It stores five kinds of field data: signalling flows (UE logs and PCAP), RF channel measurements, fading profiles, channel models and raw I/Q. Raw files are kept unchanged, curated into typed tables (Parquet, queried with DuckDB) and exported as a small `test-arena.field-data` bundle. Every field signalling message is mapped onto the workflow library and every session is matched to its closest workflow. Subscriber identifiers are masked during ingest. A local demo is built (`field_lake/`). New §3 section, Should-Have S9 (field replay), constraints, success criteria and open questions; the datalake open question is narrowed to the production schema and access path.
+> - **v1.8 (4 Nov 2026):** Added the **network model** (new Must-Have M14). Engineers import an operator's or a RAN vendor's network parameters as JSON or XML (or edit them in the app). The parameters are mapped onto a catalogue that the workflow library now carries (schema 3.1.0, `networkParameters`: 37 parameters), checked against TS 38.331 / TS 24.501 value sets, written into the RRC, NAS and PHY information elements that carry them, and used to update the procedures: timer expiries are re-timed, the IMS voice-over-PS indication switches voice calls to the VoPS path, and N26 changes the interworking expectation. S2 now covers only the agent adapting its strategy per profile. New §3 section, constraints, success criteria and open questions.
 > - **v1.7 (4 Nov 2026):** Added two **play modes** for every game and both targets (gNB / AI-RAN and modem). **Manual:** the engineer picks by click, chat command or voice dictation. **Autopilot:** the application runs a campaign, choosing each next game from what it has learned breaks the DUT. New features M12 and M13, a new §3 section, new §4.7 (Autopilot as a multi-armed bandit), constraints, success criteria and open questions. Also fixed two stale items: workflow coverage is now 17 of 17, and the L1 success-workflow question is closed.
 > - **v1.6 (4 Nov 2026):** New **§4 Game Theory Guide** for readers new to game theory: core terms, the learning engine shared by all games, the Stackelberg model behind the stress games, the five ladder models (sequential, coordination, Stackelberg with a bad leader, congestion + Nash bargaining + Nature, Rubinstein bargaining), and how a game becomes a verdict, with nine diagrams. Later sections renumbered (Technical Constraints §5, Design Standard §6, Success Criteria §7). Ladder catalogue workflow column updated for library v3.
 > - **v1.5 (4 Nov 2026):** Moved to **workflow library v3** (schema 3.0.0): every NAS message is its own step, decoded IE by IE from a new NAS library (92 PDUs, TS 24.501 clause, security header, protected PDU, TS 24.301 equivalent); five new workflows (WF-13 initial registration + PDU sessions, WF-14 de-registration, WF-15 periodic registration, WF-16 PDU session release and 5GSM/5GMM errors, WF-17 5GS–EPS interworking); 5GS↔EPS timer and interworking tables. Branch sets updated: L1 19, L2 14, L3 12, L5 15. L1's baseline is now a real library flow.
@@ -44,7 +46,7 @@ New to game theory? §4 explains each game in plain terms, with diagrams.
 
 ```mermaid
 flowchart LR
-    DL[Field datalake<br/>live captures] -- seeds --> L[UE cohort · leader<br/>Multi-UE simulator, up to 60K]
+    DL[Field-data lake<br/>signalling · RF · fading · channel · I/Q] -- seeds --> L[UE cohort · leader<br/>Multi-UE simulator, up to 60K]
     WF[Signalling workflow library<br/>5g_signalling_workflows.json] -- message sequences + pass criteria --> L
     L -- stress move --> D[DUT · follower<br/>gNB / AI-RAN or modem]
     D -- QoS response --> SR[State + Reward<br/>RACH, PRB, rejects, latency]
@@ -52,7 +54,7 @@ flowchart LR
     A -- best response --> L
 ```
 
-Field captures seed the cohort and the workflow library supplies the moves. Every DUT response becomes the agent's next state and reward, so a stress game only ends on Stop or failure.
+Field captures from the field-data lake (§3) seed the cohort and the workflow library supplies the moves. Every DUT response becomes the agent's next state and reward, so a stress game only ends on Stop or failure.
 
 **Why it matters.** Anritsu moves from selling test equipment to selling *discovered failure modes*. R&D teams find breaking points in days rather than in field trials. Every run makes the agent and the testcase library smarter.
 
@@ -90,14 +92,14 @@ Three people use Test Arena daily. Priya is the primary design target.
 
 ## 3. Feature List
 
-The scope assumes one developer working with AI coding agents. The Must-Haves form a demoable MVP in roughly 18–20 weeks (v1.0 estimate plus ~2 weeks for the Procedure Ladder, ~2 weeks for the workflow library and Level 5, and ~4 weeks for the Manual chat/voice and Autopilot play modes). Hardware integration starts as a simulated adapter, so the UI and game engine never wait on lab access.
+The scope assumes one developer working with AI coding agents. The Must-Haves form a demoable MVP in roughly 21–23 weeks (v1.0 estimate plus ~2 weeks for the Procedure Ladder, ~2 weeks for the workflow library and Level 5, ~4 weeks for the Manual chat/voice and Autopilot play modes, ~2 weeks for the network model and ~1 week for the field-data lake). Hardware integration starts as a simulated adapter, so the UI and game engine never wait on lab access.
 
 ### Must-Have (MVP)
 
 | # | Feature | What it does | Maps to |
 | --- | --- | --- | --- |
 | M1 | Game Lobby | Pick play mode (Manual or Autopilot), target (gNB or modem) and DUT; in Manual, the game type (Stress games or Procedure Ladder), feature or ladder level, and difficulty (Easy / Normal / Hard / Brutal). | Vibe 1 |
-| M2 | Testcase generator | Builds a testcase sequence from datalake field captures filtered by feature and difficulty, and shows the source captures used. For ladder levels it also lists the branch set and game model. | Vibe 1, live data |
+| M2 | Testcase generator | Builds a testcase sequence from datalake field captures (sessions in the field-data lake, M15) filtered by feature and difficulty, and shows the source captures used. For ladder levels it also lists the branch set and game model. | Vibe 1, live data |
 | M3 | Endless game loop | Runs continuously and stops only on user Stop or a defined DUT failure (crash, KPI breach, assert). Ladder levels also end on Level Clear. | Vibe 2 |
 | M4 | Game Theory engine v1 | Stackelberg leader–follower loop with a DQN agent choosing the next stress move from state + reward. On the ladder the agent chooses which branch to play next. | Vibe 6 |
 | M5 | Built-in stress games (4) | Signalling Storm, Retry Loop, Small-Packet Flood, GBR Squeeze, each a preset game with tunable intensity. Each move scales up a library workflow (see the stress-game mapping in §3). | Vibe 6 |
@@ -106,22 +108,25 @@ The scope assumes one developer working with AI coding agents. The Must-Haves fo
 | M8 | Instrument adapter layer | One interface to the Multi-UE simulator; ships with a mock adapter for development and demos. | Platform |
 | M9 | Run history | Every game saved with config, score timeline, failure point and replay of the move sequence. | Diagnostics |
 | M10 | **Procedure Ladder (5 levels)** | Registration → Data Call → Handover & Mobility → Throughput → IMS Voice & Video. Each level has its own game model, branch set, five KPIs and clear rule. Levels unlock in order per DUT. | Vibe 1, Vibe 6 |
-| M11 | **Signalling workflow library** | Loads `5g_signalling_workflows.json` (schema `test-arena.signalling-workflows` v3.0.0). Every ladder branch and stress move references a workflow ID (plus failure case, variant or cause). The Briefing shows each branch's message flow; the Arena narrates messages and timers as they play; reports name the workflow step where the DUT went wrong. | Vibe 1, Vibe 3 |
+| M11 | **Signalling workflow library** | Loads `5g_signalling_workflows.json` (schema `test-arena.signalling-workflows` v3.1.0, which adds the `networkParameters` catalogue used by M14). Every ladder branch and stress move references a workflow ID (plus failure case, variant or cause). The Briefing shows each branch's message flow; the Arena narrates messages and timers as they play; reports name the workflow step where the DUT went wrong. | Vibe 1, Vibe 3 |
 | M12 | **Manual play: click, chat or voice** | The engineer chooses the game, ladder level, branch subset, difficulty and target by clicking, typing a chat command or dictating by voice (push-to-talk). Commands are shown back as editable chips and never start a game without confirmation. Works for gNB / AI-RAN and modem targets. | Vibe 1, Vibe 4 |
 | M13 | **Autopilot campaigns** | The application chooses each next game itself (stress game, ladder level or branch subset, and difficulty) from a per-target, per-DUT-family knowledge base of past runs, failures, move values and coverage gaps. It explains every pick, respects ladder order, runs within a time or failure budget, recovers the DUT after a failure and produces a campaign report. The engineer can skip, pin, take control or stop at any time. | Vibe 2, Vibe 4, Vibe 6 |
+| M14 | **Network model (operator / RAN-vendor parameters)** | Import a network's configuration as a JSON or XML file (Test Arena's canonical format, a 3GPP NRM-style export using TS 28.541 attribute names, or a vendor or operator parameter list), or edit it in the app. Each entry is mapped onto the library's parameter catalogue, converted to the TS 38.331 / TS 24.501 encoding and checked against the allowed values; an import report shows what was mapped, converted, rejected or not recognised. When applied, the model replaces the library's default values in every message that carries them (SIB1, RRCReject, RRCReconfiguration, REGISTRATION ACCEPT/REJECT, SECURITY MODE COMMAND and more) and updates the procedures: timer expiries move, voice calls follow the IMS voice-over-PS indication and interworking follows N26. Every changed value is marked "Model" in the Briefing, trace and logs, and every run records the model it used. | Vibe 5, Vibe 3 |
+| M15 | **Field-data lake** | Stores the field data that seeds testcases: signalling flows (UE / drive-test logs and PCAP), RF channel measurements, fading profiles, channel models and raw I/Q captures. Original files are kept unchanged. Each one is curated into typed tables with its lineage, and subscriber identifiers are masked on the way in. Every field signalling message is mapped to its library message name and workflows, and every session is matched to its closest workflow. A curated sample is exported as a versioned bundle (`test-arena.field-data`) for the testcase generator (M2) and the static demo. | Vibe 1, live data |
 
 ### Should-Have (v1.1)
 
 | # | Feature | What it does | Maps to |
 | --- | --- | --- | --- |
 | S1 | Hot-add games | While a game runs, prompts the user to stack another feature ("DUT survived 30 min — add Mobility Storm?"). Games run concurrently. | Vibe 2 |
-| S2 | Vendor & operator profiles | Import RAN vendor parameter sets and MNO network models (JSON/YAML). The agent adapts its strategy per profile. | Vibe 5 |
+| S2 | Vendor & operator profiles | Builds on M14: the agent and Autopilot adapt their strategy per imported network model (priors per vendor and operator profile), YAML import, and vendor-specific mapping tables maintained per customer. | Vibe 5 |
 | S3 | Automation API + CI hooks | REST/WebSocket API to start, stop and query games; webhooks on failure; Jenkins/GitLab examples. | Vibe 4 |
 | S4 | Failure root-cause hints | AI summary of the failure: the move sequence that triggered it, the KPIs that drifted first, and the likely layer. | Vibe 3 |
 | S5 | Reverse mode (modem) | The network becomes the adversary for modem testing, replaying operator behaviour against the modem. | Persona Kenji |
 | S6 | Resilience leaderboard | Ranks DUT builds by resilience score and highest ladder level cleared, and shows the trend across software drops. | Persona Sofia |
 | S7 | Scheduled campaigns | Queue games overnight with a stop budget (time, failures). | Vibe 4 |
 | S8 | **Tournament mode** | Chains all five ladder levels in one run with state carried across (registered UE → active PDU session → handover with data running → throughput after handover → VoNR call over the same bearers). Cross-workflow cases such as RLF during an active call (WF-03 + WF-12) are played here. Finds interaction bugs that pass in isolated levels. | Vibe 2 |
+| S9 | **Field replay** | Plays a field-data lake session against the DUT. Its signalling becomes a ladder branch or stress move on the workflow it matches, its RF timeline (RSRP, SINR, BLER) shapes the cohort's radio conditions, and its fading profile sets the channel. Reproduces a field-reported failure in the lab. | Persona Kenji, Vibe 1 |
 
 ### Nice-to-Have (later)
 
@@ -133,7 +138,7 @@ The scope assumes one developer working with AI coding agents. The Must-Haves fo
 | N4 | Achievements & streaks | Badges such as "First Blood" (first DUT failure), "Iron DUT" (24 h with no failure) and "Ladder Master" (all five levels cleared on Brutal). |
 | N5 | Digital Twin hook | Run games against a network digital twin before touching real hardware. |
 | N6 | Multi-user arena | Shared live view, comments on failure moments, team spectator mode. |
-| N7 | NTN / RF impairment games | Doppler, delay and fading stress for non-terrestrial and RF front-end testing. |
+| N7 | NTN / RF impairment games | Doppler, delay and fading stress for non-terrestrial and RF front-end testing, using fading profiles and channel models from the field-data lake (M15). |
 | N8 | **Mobility under load** (Ladder Level 6) | A repeated game where handovers happen during congestion, so the Level 3 and Level 4 rules must hold at the same time. |
 | N9 | **Workflow authoring and import** | Add or edit workflows in the library schema, and import them from existing TTCN-3 / TS 38.523-1 test cases, so customers can bring their own procedures into the game. |
 
@@ -231,7 +236,7 @@ These typical picks are the cold-start priors; after the first few runs the pick
 
 The library file `5g_signalling_workflows.json` is the single source of truth for what every move sends and what counts as correct.
 
-- **Schema:** `test-arena.signalling-workflows` v3.0.0 · technology 5G NR SA (5GS), FR1 TDD · generated 3 Nov 2026 · 17 workflows, 29 cases, 1,927 steps.
+- **Schema:** `test-arena.signalling-workflows` v3.1.0 · technology 5G NR SA (5GS), FR1 TDD · generated 4 Nov 2026 · 17 workflows, 29 cases, 1,927 steps. Version 3.1.0 is 3.0.0 plus the `networkParameters` section; no step, message or NAS PDU changed.
 - **Spec baseline:** RRC ASN.1 TS 38.331 Rel-18 (UPER-encoded and decoded back); default message contents TS 38.508-1; DCI TS 38.212 7.3.1; MAC TS 38.321; PHY procedures TS 38.213/38.214/38.211; NAS TS 24.501 (every PDU hand-encoded and round-tripped); EPS NAS TS 24.301 for interworking; IMS TS 24.229 with TS 34.229-1/-5.
 - **Test environment defaults:** band n78, TDD, 30 kHz SCS, 40 MHz BWP, pattern DDDDDDDSUU; PLMN 001/01; Cells 1 and 2 in TAC 1, Cell 3 in TAC 2; reference UE identities (IMSI, 5G-S-TMSI, C-RNTI); DCI sizes, HARQ timing (K1, K2), SR config, radio bearers (SRB1–2, DRB1–4) and RRC procedure delays.
 - **Step model:** each step has `seq`, `time` (SFN, slot, ms), `dir` (UL, DL, UE-internal, SS test-system action), `layer` (PHY, MAC, RRC, 5GMM, 5GSM, EMM, SIP), `channel` and `message`, plus whichever applies: `pdcch` (DCI format, RNTI, search space, CORESET, aggregation level and every field with bit width and value), `pdsch`/`pusch`, `pucch` (HARQ-ACK or SR), `prach`, `macPdu`, `messageRef` (RRC, into the message library), `carriesNAS` (on RRC steps), SIP `headers`/`sdp`, `timers` (start, stop, expired, running), `note` and `expect`.
@@ -239,6 +244,7 @@ The library file `5g_signalling_workflows.json` is the single source of truth fo
 - **Message libraries:** 107 RRC messages (ASN.1 type, UPER hex, decoded IE tree with `_absentOptional`/`_absentExtensions` at every level, contained CellGroupConfig/NAS) and 92 NAS PDUs (TS 24.501 clause, procedure, TS 24.301 equivalent, plain hex, IEs with IEI/length/value, absent optional IEs, contained messages).
 - **Interworking references:** `nasInterworking24301` (10 places where EPS IEs ride in 5GS NAS, e.g. S1 UE network capability, selected EPS NAS algorithms, mapped EPS bearer contexts), `nasTimers` (14 timers with defaults, start/stop and their TS 24.301 equivalents, e.g. T3510 ↔ T3410/T3430) and `guti4G5GMapping` (TS 23.003 2.10.2).
 - **Outcome model:** success workflows have `passCriteria`; failure workflows have `cases` (each a full step list), some with a `causeMatrix` (cause, encoded NAS PDU, expected UE behaviour) or `sipResponseMatrix`; `variants` describe changes to a base flow.
+- **Network parameters** (`networkParameters`, new in 3.1.0): 37 configurable parameters in nine groups (cell identity; cell selection and paging; SIB1 UE timers and constants; connection control; random access; event A3 mobility; security; network-signalled NAS timers; slicing and features). Each entry has its TS 38.331 / TS 24.501 reference, value set or range and unit, the timer it drives, vendor-neutral import aliases, its `libraryDefault` read from the library, and `bindings`: the IE key in `messageLibrary`, `nasLibrary` or the step PHY detail it writes, with an optional `under` (ancestor IE), `match` (per-cell value) and `codec` (for example half-dB units, 24-bit TAC, PLMN BCD, GPRS timer). The section is generated by `netparams.py` in the workflow generator.
 - **Verification list:** `defaults.verify` names 10 configuration areas (band/ARFCN, TDD pattern, CORESET#0, PRACH, SR and HARQ timing, TDRA tables, RLC/PDCP timers, logical-channel priorities, SIB1 UE timers, A3 and cell power) to check against the customer's TS 38.508-1 baseline.
 - **Not covered yet** (`notCoveredYet`): UE-requested PDU session modification, EAP-AKA′, NSSAA, SOR/UE parameters update; MT voice/video, IMS registration and emergency, SMS; RRC_INACTIVE, release with redirect, UAC barring; CHO, DAPS, inter-frequency HO with gaps; CA, BWP switching, standalone BFR, on-demand SI; ETWS/CMAS, positioning, NR-DC, RedCap, NTN. The LTE RRC and L1 side of EPS fallback arrives with the LTE stage.
 
@@ -292,6 +298,107 @@ Random access, scheduling requests and HARQ are now in the library itself, so st
 - **Latency.** A DUT response's latency is the library's own SFN/slot gap to the previous step, stretched by the current load; under barring or rejecting it is 3× that.
 - **A verdict on every DUT response.** *As expected* (the message the workflow expects, with its latency), *late* (correct but slower than unloaded, e.g. while barring access), *wrong message* (e.g. RRCReject instead of RRCSetup) or *no response* (timer expiry, or the DUT going down).
 - **Effect on the game.** On the ladder, a wrong or missing DUT response means the branch must replay cleanly before it can pass. In stress games that UE's flow is abandoned and the next UE starts.
+
+### Network model: operator and RAN-vendor parameters *(new in v1.8)*
+
+The workflow library describes procedures with **default** message contents (TS 38.508-1 style: PLMN 001/01, T300 1000 ms, A3 offset 3 dB …). A real DUT is configured for a real network: an operator's PLMN, tracking areas and timers, a RAN vendor's mobility and RACH tuning. The network model brings that configuration into the game, so every message the tester sends, every timer it waits for and every verdict it gives match the network the DUT will live in.
+
+```mermaid
+flowchart LR
+    F[Operator / vendor file<br/>JSON or XML] --> R[Read<br/>flatten keys and values]
+    R --> M[Map<br/>aliases → 37 catalogue parameters,<br/>per-cell instances]
+    M --> C[Convert and check<br/>units, TS 38.331 / 24.501 value sets,<br/>GPRS timer encoding]
+    C --> P[Import report<br/>mapped · converted · rejected · not mapped]
+    P -- engineer applies --> A[Apply to the signalling flow]
+    A --> V[IE values in RRC, NAS, PHY<br/>marked 'Model']
+    A --> T[Timer expiries re-timed]
+    A --> Q[Procedure switches<br/>VoPS, N26]
+    A --> S[Cohort pressure per KPI]
+```
+
+**Sources it accepts.**
+1. **Canonical Test Arena model:** `{"schema": "test-arena.network-model", "parameters": {"sib1.t300": "ms2000", …}}`. The app exports this format and offers JSON and XML templates pre-filled with the library defaults.
+2. **3GPP NRM-style export** (bulk CM XML or JSON) using TS 28.541 attribute names such as `nRPCI`, `nRTAC`, `ssbFrequency`, `plmnId/mcc`, `snssai/sst`. Cell instances are recognised from the managed-object names (`NRCellDU=Cell2`) or taken in order.
+3. **Vendor or operator parameter lists:** any JSON object tree, `<p name="…">value</p>`, `<parameter name="…" value="…"/>` or plain element XML. Keys are matched against each parameter's aliases (the TS 38.331 IE name, the TS 28.541 name and common vendor-style spellings such as `t300Timer`, `prachConfigIndex`, `a3Offset`, `timeToTriggerA3`, `periodicRegistrationTimer`, `imsVoiceOverPS`).
+
+**Conversion rules.** Values with units are converted (`"500 ms"` → `ms500`, `"30 min"` → 1800 s, `"2 dB"` → hysteresis 2 dB). A unitless number keyed by the exact TS 38.331 IE spelling is read in IE units (`a3-Offset: 6` → 3 dB); any other key is read in the catalogue unit. Enumerated values must be in the TS 38.331 set (`t311 7000` is rejected and the allowed values are listed). NAS timers must be encodable as a GPRS timer (unit × 0…31), so 54 min is rejected for T3512. A PLMN may be given as one value (`001-01`) or as MCC and MNC. Unknown keys are reported as *Not mapped* and never guessed.
+
+**What changes in the signalling flow.**
+- **Values.** Every IE bound to a parameter takes the model's value wherever it appears in the library: SIB1 PLMN, TAC, cell identity, `ue-TimersAndConstants` and `rach-ConfigCommon`; RRCReject `waitTime`; RRCReconfiguration `t304` and the event A3 report configuration; RRC and NAS security algorithms; REGISTRATION ACCEPT T3512, T3502, TAI list, allowed NSSAI and 5GS network feature support; REGISTRATION REJECT T3346; the PCI on SS/PBCH and PRACH configuration on Msg1. The UPER and NAS hex remain the library's encoding, and the inspector says so.
+- **Timing.** When the library holds a timer in real time, its expiry step moves by the difference and every later step moves with it (WF-12 RLF with T310 2000 ms, WF-11 T304, WF-08b T300, and others). DUT response latency and the trace follow the new timing. Where the library compresses a long timer (T3512, T311), the value is shown and the timeline is left alone.
+- **Procedures.** IMS voice over PS = *Not supported* turns every L5 call branch into the IMS-VoPS path from WF-09a (the UE must not originate). N26 interworking changes the expected behaviour of WF-17 EPS fallback and idle mobility. A3 offset, hysteresis and time-to-trigger change the Level 3 handover pressure; RACH and RRC timers change the random-access, timeout and reject pressure of the stress games and L1/L2 (bounded to ±20%, deterministic).
+- **Evidence.** The Briefing, trace inspector, Game Over and downloaded logs show each changed value next to the library value, and every run records the model's name and fingerprint so a replay can use the same model.
+
+**Same model, two targets.** For a gNB target the model describes the network the gNB is configured for: its SIB1, RACH, mobility and security settings are what the DUT must broadcast and apply. For a modem target it is the emulated network the modem must handle. One active model applies to both play modes; a running game keeps the model it started with.
+
+### Field-data lake *(new in v1.9)*
+
+Test Arena's promise is testcases drawn from real field behaviour, not invented ones. The field-data lake is where that behaviour lives. It collects what drive tests, lab runs and network probes record, keeps the originals, and turns them into clean, linked tables the testcase generator (M2) can query. It starts as a folder on one laptop and grows to a cloud lakehouse without changing its tables.
+
+```mermaid
+flowchart LR
+    S1[UE / drive-test logs<br/>QXDM · Nemo · TEMS exports] --> RAW
+    S2[PCAP / pcapng<br/>NGAP · NAS · SIP · GTP-U] --> RAW
+    S3[RF measurements · CSV] --> RAW
+    S4[Fading profiles ·<br/>channel models<br/>CSV · .mat · JSON] --> RAW
+    S5[Raw I/Q + sidecar] --> RAW
+    RAW[Raw zone<br/>originals, never modified<br/>manifest.csv] -- ingest + mask --> CUR[Curated zone<br/>typed Parquet tables<br/>+ lineage]
+    WF[Workflow library] -- message names, WF IDs --> CUR
+    CUR -- curated sample --> EXP[Export<br/>test-arena.field-data bundle]
+    EXP --> M2[Testcase generator M2<br/>Briefing source captures]
+    EXP --> S9[Field replay S9]
+```
+
+**Three zones.**
+
+1. **Raw (bronze).** Files exactly as delivered, each listed in a manifest with its campaign, session, DUT, DUT family, target (gNB or modem), band and area. Nothing ever edits a raw file.
+2. **Curated (silver).** One table per kind of data, typed by a single schema file and stored as Parquet. Re-ingesting a file replaces only that file's rows, so runs are repeatable. Removing a file from the manifest removes its rows. A lineage table records the source file, its SHA-256, the row count and the ingest time for every table a file feeds.
+3. **Export (gold).** A small, versioned JSON bundle with a curated subset of sessions, capped in size, ready for the app.
+
+**What it stores.**
+
+| Field data | Table | Accepted sources | Key content |
+| --- | --- | --- | --- |
+| Signalling flow | `signalling_event` | Decoded-message CSV exports from UE log tools (proprietary binaries are exported in the vendor tool first); `.pcap` / `.pcapng` | Time, SFN/slot, layer (PHY to SIP, plus NGAP), direction, message, PCI, masked detail, **library message name and workflow IDs** |
+| RF channel flow | `rf_measurement` | Drive-test CSV | Position and speed, PCI, NR-ARFCN, RSRP / RSRQ / SINR, CQI, MCS, rank, BLER, UL/DL throughput |
+| Fading data | `fading_profile` | CSV, one row per profile | Model family (TDL, CDL, measured), delay spread, Doppler and speed, carrier, LOS and K-factor |
+| Channel model data | `channel_tap` | `.mat`, JSON or CSV | Per-tap delay and power, plus departure and arrival angles for CDL-type models |
+| Raw I/Q | `iq_capture` | `cf32` or `ci16` binary with a JSON sidecar | Hash, sample format, centre frequency, sample rate, duration, mean power, PAPR and a 64-bin spectrum. **The samples stay in the raw zone** |
+| Sessions | `session` | Manifest + the tables above | Campaign, DUT, time span, event and RF counts, **closest library workflow and match score** |
+
+**Linked to the workflow library.** Every RRC, 5GMM, 5GSM, EMM and SIP message is matched by name to `5g_signalling_workflows.json`, regardless of how the tool spells it ("Registration request" → `REGISTRATION REQUEST`). Each message gets its library name and the workflows that contain it. Each session is matched to the library workflow its messages resemble most, using overlap divided by union (Jaccard), so a short workflow that sits inside a longer one does not win by default. Field messages the library does not know are listed as candidates for new workflows (N9).
+
+**PCAP decoding.** With Wireshark installed, `tshark` decodes NGAP, NAS-5GS, NR-RRC and SIP. Without it, a built-in reader handles pcap and pcapng, decodes SIP (over UDP, TCP, or inside GTP-U on N3) and names NGAP procedures. NAS that is ciphered in the capture needs the keys.
+
+**Privacy built in.** IMSI, SUPI, IMEI, and SIP and tel numbers are masked during ingest, keeping the last four digits (the same rule as the app). Nothing unmasked reaches the curated zone or the bundle. Raw I/Q samples never leave the raw zone; only their summary does.
+
+**How the game uses it.**
+- **Testcase generation (M2):** a lake session is a "source capture". The Briefing lists the sessions that seeded a testcase, and their matched workflows tell the generator which branches and moves the field data supports.
+- **Field replay (S9):** a session's signalling, RF timeline and fading profile are played against the DUT.
+- **RF impairment games (N7):** fading profiles and channel models set Doppler, delay and fading.
+- **Static demo:** the bundle is embedded in `index.html` (or imported from Settings). Its sessions are Briefing source captures, sent to the games and levels that play their matched workflow, and Settings lists them. It stays small (2 MB warning threshold, RF bucket-averaged, events capped per session) and carries the workflow library version it was mapped against.
+
+**Bundle (`test-arena.field-data`, v0.1.0).** It holds the generated time and the library version. Each session carries its metadata, matched workflow and score, its events and RF points as compact `{cols, rows}` tables, and its I/Q summaries. Fading profiles carry their taps.
+
+**Grows without a redesign.**
+
+| Stage | Storage | Query engine | How Test Arena gets the data |
+| --- | --- | --- | --- |
+| Demo (built) | Local folder (outside cloud sync) | DuckDB | Bundle embedded in the static build |
+| Team pilot | Azure Data Lake Storage or SharePoint | DuckDB or Microsoft Fabric | Bundle imported as a file, like a network model |
+| Production | ADLS / S3 with Delta Lake or Apache Iceberg tables, partitioned by campaign and date | Fabric, Databricks or Athena | Read-only query service on the Test Arena host |
+
+The Parquet files and the schema carry over unchanged. The ingest scripts become scheduled jobs.
+
+**Demo status (6 Nov 2026).** The demo is built in `field_lake/` (Python, DuckDB, Parquet). The code is in the repository and the data is kept in `C:\data\field-lake`. A synthetic dataset built from real library sequences (WF-01, WF-13, WF-03) runs end to end, with these results:
+- 100% of RRC, NAS and SIP messages are mapped.
+- Each session is matched to the right workflow.
+- No unmasked identifier survives ingest.
+- The bundle is 59 KB.
+
+Two things are not yet proven:
+- The `tshark` path waits on a real PCAP and a Wireshark install.
+- The synthetic fading taps are illustrative, not TR 38.901 table values.
 
 ### Procedure Ladder — game catalogue
 
@@ -739,18 +846,26 @@ The browser shows and steers the game. The real-time work happens server-side, n
 - **Real-time split.** Slot-level decisions (sub-ms) run on the simulator/agent host, never in the browser. The UI receives state at 10–20 Hz over WebSocket.
 - **Scale.** The UI must represent cohorts of up to 60K UEs. It renders aggregated cohort tiles, not one element per UE.
 - **Instrument interfaces.** All hardware access goes through the adapter layer over Anritsu's standard interfaces (Ethernet/SCPI, GPIB, USB). There are no vendor-specific calls outside the adapter.
-- **Datalake access is read-only.** Testcase generation queries field captures but never writes back to or modifies them.
-- **Data confidentiality.** Field captures and vendor/MNO profiles are customer-confidential. This requires on-premise or private-cloud deployment, no third-party telemetry, and masking of subscriber identifiers (IMSI/SUPI) before display.
+- **Datalake access is read-only.** Testcase generation queries field captures but never writes back to or modifies them. Only the lake's own ingest pipeline writes, and only to the curated and export zones; raw files are never modified.
+- **Data confidentiality.** Field captures and vendor/MNO profiles are customer-confidential. This requires on-premise or private-cloud deployment, no third-party telemetry, and masking of subscriber identifiers (IMSI/SUPI) before display. In the field-data lake, masking happens during ingest, so the curated tables and the bundle never hold an unmasked identifier.
+- **Field-data lake.**
+  - Open formats only: Parquet for tables, JSON for the bundle, with one schema file as the source of truth for columns and types.
+  - Every curated row traces back to a raw file and its SHA-256.
+  - Raw I/Q is summarised, never copied into tables, bundles or the browser.
+  - Large raw files and the lake folder stay out of cloud-sync folders such as OneDrive.
+  - The bundle records the workflow library version it was mapped against, so a library upgrade shows which bundles need re-export.
 - **Deterministic replay.** Every game logs its seed, agent version and move sequence, so any failure can be replayed exactly.
 - **Chat and voice input.** Chat commands are parsed on the Test Arena host by a constrained grammar over the library's vocabulary (an on-premise language model may be added later), so no command text leaves the lab. Voice uses an on-premise speech-to-text engine in lab deployments. Audio is processed in memory and never stored, and voice is off by default. The static demo may use the browser's built-in speech recognition only as an opt-in (see the site contract).
 - **Autopilot knowledge base.** It is stored on the Test Arena host next to run history, keyed by target type, DUT family and DUT build. It never leaves the deployment and never mixes customers. Every campaign decision is logged with its inputs, so a campaign can be replayed like a single game.
 - **Ladder emulation.** For gNB targets, the ladder exercises the gNB's RRC and NGAP handling of each procedure with the core network emulated. For modem targets, the network side is emulated. Level 3 needs three emulated cells: two in one tracking area and one in a second (the library's NR Cells 1–3).
+- **Network models.** Operator and vendor parameter files are customer-confidential: they are parsed on the Test Arena host (in the static demo, in the browser) and never sent anywhere. Imports are validated against the library's `networkParameters` catalogue; nothing outside the catalogue is applied, and the library file itself is never modified. A model changes the values the adapter sends, not the procedure catalogue; re-encoding UPER/NAS hex with the model's values is the adapter's job (the static demo shows library hex and flags the differences).
 - **Workflow library.** `5g_signalling_workflows.json` is read-only input, validated against its schema name and version before use. The adapter translates each step (UL/DL message, SS action, timer) into simulator commands. Fields marked `verify: true` are shown as warnings until confirmed for the customer's 38.508-1 baseline.
 - **Solo-dev stack.**
   - Backend and game engine: Python (FastAPI).
   - Agent: PyTorch.
   - Front-end: TypeScript/React.
   - Storage: PostgreSQL + a time-series store for KPIs.
+  - Field data: Parquet lakehouse queried with DuckDB (demo), moving to Delta Lake or Iceberg on ADLS / S3; ingest in Python (NumPy, SciPy, `tshark` for PCAP).
   - Deployment: Docker Compose.
   - Choose boring, well-documented libraries that AI agents generate reliably.
 - **Standards.** Testcase vocabulary aligns with 3GPP terms (RACH, RRC, PRB, 5QI/GBR). Ladder levels use 5GMM/5GSM terms and cause values from TS 24.501, RRC procedures and measurement events from TS 38.331, idle-mode reselection from TS 38.304, IMS from TS 24.229 / 34.229-1/-5 / 26.114, and default message contents from TS 38.508-1, as recorded in the workflow library. O-RAN interfaces (E2/A1) are a target for AI-RAN DUTs.
@@ -859,17 +974,29 @@ The MVP is done when an engineer can go from lobby to a running stress game in u
 | Autopilot · regression | Defects found on build N that are retested first on build N+1 | 100% |
 | Autopilot · explainability | Planned games that show a reason and a knowledge-base source | 100% |
 | Both targets | Manual and Autopilot run end to end for gNB / AI-RAN and for modem | 2 of 2 targets |
+| Network model · import | Parameters in a reference set of operator and vendor files (JSON and XML) mapped to the right catalogue parameter and value | ≥ 95%; 100% of invalid values rejected with a reason, 0 unknown keys applied |
+| Network model · effect | Messages in the library that carry a changed parameter show the model's value | 100% |
+| Network model · traceability | Runs that record the network model (name and fingerprint) they used | 100% |
+| Field data · ingest | Supported files in a reference set (UE log export, pcap, pcapng, RF CSV, fading CSV, `.mat`, JSON, I/Q) ingested without manual edits | 100%; failures reported per file, never silently skipped |
+| Field data · mapping | RRC, NAS and SIP messages in reference sessions mapped to their library message name | ≥ 95%; every unmapped message listed |
+| Field data · workflow match | Reference sessions matched to the workflow they were recorded from | ≥ 90% |
+| Field data · privacy | Unmasked IMSI / SUPI / IMEI in curated tables or the bundle | 0 |
+| Field data · lineage | Curated rows traceable to a raw file and its SHA-256 | 100% |
 
 ### v1.1 and adoption
 
 - **Hot-add:** a second game is added to a running session with no restart.
 - **Tournament:** all five ladder levels run back to back in one session with state carried across, and at least one interaction defect is found that isolated levels missed.
 - **Automation:** a full game run is triggered and reported via API from a CI pipeline, with zero manual steps.
-- **Profiles:** at least 2 RAN vendor and 2 MNO profiles are imported and change agent behaviour.
+- **Profiles:** at least 2 RAN vendor and 2 MNO network models are imported (M14) and change agent and Autopilot behaviour (S2).
+- **Field replay:** a field-reported failure is reproduced in the lab from its lake session (S9) within one hour.
 - **Pilot:** 3 internal or customer engineers each run ≥ 5 games in a week, and at least one reports a defect not found by their existing suite.
 - **Usability:** pilot users rate "I wanted to keep playing" ≥ 4/5.
 
 ### Open questions
+
+- **Network model:** which vendor export formats must be supported first (per customer), and who maintains the alias tables for each vendor's parameter names? Should parameters outside the current 37 (RLC/PDCP timers, DRX, QoS/5QI, SSB periodicity, TDD pattern) be bound next, and which need a library rebuild because they change encodings or message sizes?
+- **Network model:** should the adapter re-encode UPER and NAS hex with the model's values (needs the ASN.1 and NAS encoders on the host), and should a model be able to switch procedures beyond VoPS and N26 (for example disabling the identification procedure or enabling NSSAA)?
 
 - **Play modes:** which on-premise speech-to-text engine (and which languages and accents) does voice need? Is a local language model wanted for freer chat, or is the constrained grammar enough?
 - **Play modes:** can Autopilot knowledge be shared across DUT families or customers (anonymised priors), or must every deployment start cold? What default budget should a nightly campaign use?
@@ -877,7 +1004,9 @@ The MVP is done when an engineer can go from lobby to a running stress game in u
 
 - Which reference DUT sets the agent-value baseline: a commercial gNB, an O-RAN stack such as OAI/srsRAN, or a modem?
 - What counts as "DUT failure" per feature: crash only, or KPI breach thresholds? This needs a table per game, including each ladder level.
-- What are the datalake schema and access path for field captures? To confirm with the data team.
+- **Field-data lake:** the demo schema (`field_lake/schema.sql`) is set. What are the production hosting (Azure, AWS or on-premise), access path and retention rules, and who owns ingest? To confirm with the data team and per customer.
+- **Field-data lake:** which UE log tools and export formats come first (QXDM, Nemo, TEMS, others), and who maintains their column aliases? Are Wireshark and NAS keys available in customer labs for decoding core-side PCAPs?
+- **Field-data lake:** lake sessions now seed Briefing captures in the demo. How should field replay (S9) turn a session's events, RF timeline and fading profile into play, and how should RF conditions set cohort pressure? Which measured or TR 38.901 fading and channel models should replace the synthetic samples?
 - **Ladder:** what minimum run time should a level need before it can be cleared, and should a clear expire when a new DUT build is loaded?
 - **Ladder:** does the Multi-UE simulator emulate the two or more cells Level 3 needs, or does that require a second instrument?
 - **Workflows:** who owns `5g_signalling_workflows.json`, how new versions are released, and which TS 38.508-1 version is the baseline for the 10 areas in `defaults.verify`? The library has no #21 synch-failure encoding (adapted from #20), no full flows for SIP 480/503/408 (played on the 486 flow) and no video response matrix (three L5 branches dropped). Real NAS integrity codes need keys from the test USIM; the library uses placeholders.

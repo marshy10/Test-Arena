@@ -1,8 +1,9 @@
 # Test Arena — Design Standard
 
-*Visual specification v2.5 · 4 Nov 2026 · supersedes §6 "Design Standard" in `PRD.md`*
+*Visual specification v2.6 · 4 Nov 2026 · supersedes §6 "Design Standard" in `PRD.md`*
 
 > **Change log**
+> - **v2.6 (4 Nov 2026):** Network model: the "Model" value mark (new value, struck library value, neutral tag with the sliders icon), the drop zone, import-report status badges, the parameter table and the fifth nav item; play-mode components written down (command bar, interpretation chips, mic, queue, Autopilot badge, plan rows, countdown ring); two vocabulary terms (ネットワーク, 作戦). No new colour tokens.
 > - **v2.5 (4 Nov 2026):** NAS decode block: IE table, security block and the protected-PDU hex; Settings timer and interworking tables.
 > - **v2.4 (3 Nov 2026):** PHY/MAC rows in the trace and message flow (quieter weight, dotted arrows, gNB-internal square), Signalling / All layers toggle, decoder blocks (hex rows, DCI field table, folded ASN.1 tree with absent-IE lines, SDP block), and the "Adapted" and "Composed" tags.
 > - **v2.3 (2 Nov 2026):** Signalling trace: lane diagram, verdict colours, IE tree and the agent/trace tabs.
@@ -73,7 +74,7 @@ Each accent has **one meaning**, and that meaning never changes. Count the accen
 | `--accent-shu` | `#F2462E` | Shu-iro (朱, vermilion) | Stakes: STOP, DUT failure, KPI breaches, failed ladder branches, the hanko seal. "Something broke or will be destroyed." Never decorative. |
 | `--accent-kin` | `#E8C25A` | Kin (金, gold) | Score and reward only, plus achievements later. "You earned this." |
 | `--accent-hisui` | `#4ADE9A` | Hisui (翡翠, jade) | Healthy / passed. DUT serving normally; game `RUNNING`; branch passed; level `CLEARED`; the clear mark. |
-| `--accent-fuji` | `#9B87F5` | Fuji (藤, wisteria) | The AI agent: agent panel, agent actions, model labels, game-model labels on level cards and the Briefing. |
+| `--accent-fuji` | `#9B87F5` | Fuji (藤, wisteria) | The AI agent: agent panel, agent actions, model labels, game-model labels on level cards and the Briefing, and Autopilot (its badge, the reason for each pick, pinned plan rows, the countdown ring). |
 | `--accent-warn` | `#F5A524` | — | Warnings: `SIMULATED` badges, "defaults to verify" badges and the injection step in a message flow (where the tester deviates from the happy path). Never used for failure. |
 
 ### 1.5 Data colours (UE slices; never used elsewhere)
@@ -108,7 +109,7 @@ To fill behind an accent, use the accent at a fixed opacity. Never use a new hex
    - Text takes ~12%.
    - Accents take ≤ 3%.
    - Accents are for lines, text, icons and small fills, never large solid areas. The exceptions are the hanko seal on DUT failure and the clear mark on a level clear.
-2. **Vermilion is rare.** It may appear only on the STOP button, failure states, breached KPIs and failed branch rows. If vermilion is visible while nothing is wrong, it is a bug.
+2. **Vermilion is rare.** It may appear only on the STOP button, failure states, breached KPIs, failed branch rows and Rejected rows of a network-model import report. If vermilion is visible while nothing is wrong, it is a bug.
 3. **One primary action per view** gets a solid `--accent-primary` fill. Everything else is outline or ghost.
 4. **Never rely on colour alone.** Pair every state colour with an icon, label or shape.
 5. **Jade means passed, gold means earned.** A cleared level is jade (state); its score is gold (reward). Never swap them.
@@ -198,6 +199,8 @@ Japanese is **atmosphere, not content**. It always sits *with* English and never
 | Procedure Ladder | 段位 | dan'i (rank / grade) |
 | Level clear | 突破 | toppa (breakthrough) |
 | Message flow / workflow | 手順 | tejun (procedure) |
+| Network model | ネットワーク | nettowāku (network) |
+| Campaign plan | 作戦 | sakusen (plan of operations) |
 
 ---
 
@@ -369,6 +372,13 @@ Depth comes from **layer colour plus edge light**, not big drop shadows.
 | **Library reference tables** | Settings shows the 5GS↔EPS timer table and the 24.301 interworking list inside `<details>` disclosures, using the compact table style; closed by default. |
 | **Adapted / Composed tags** | "Adapted" (a value differs from the library message, e.g. a cause octet) uses the amber tag (`--accent-warn` text and border); "Composed" (a flow joined from library flows) uses the neutral tag. The annotation text for an adapted step is `--accent-warn`. |
 | **IE inspector** | `--bg-1` pane. The DUT-response block has a 2 px left bar in the verdict colour (jade as expected, amber late, vermilion wrong or missing). IEs are a mono tree: keys `--text-2`, values `--text-1`, nesting shown by a hairline left rule; `verify` objects carry an amber tag. |
+| **Model value** (network model) | A value that comes from the imported network model, not the library: the new value in `--text-1` at weight 500, the library value after it in `--text-2` with a line-through, then a neutral tag "Model" (`--line-2` border, `--text-1` text, Lucide `sliders-horizontal` 12 px). Used in IE trees, the PHY key–value lists, message-flow rows and the impact table. It is information, not a warning: never amber, never vermilion. A one-line caption above a decoded tree says how many values differ and that the hex is the library's. |
+| **Drop zone** | A `bg-2` block with a 1 px dashed `--line-2` border, `--radius-1`, 24 px padding: upload icon (20 px, `--text-2`), a `body-strong` line and a `caption`. Hover and drag-over: border cyan, 8% (hover) or 14% (drag-over) cyan fill. Keyboard focus lands on the visually hidden file input and the focus ring draws on the zone. |
+| **Import report** | Status badges in the existing badge style with one meaning each: Mapped jade (check icon), Converted cyan, Rejected vermilion (alert icon; the row also gets the failed-row left bar), Not mapped and Duplicate neutral. Rows use the compact table (auto height); the source path and the note sit under their values in `caption`. |
+| **Parameter table** | Grouped compact table: group header rows in `label` style, then parameter (mono label + spec reference in `caption`), library value (`--text-2`, mono), the control (select or 40 px input, unit beside it in `caption`) and status ("Model" tag or "Library" caption). A changed row gets a 2 px `--line-2` left bar. |
+| **Command bar** (play modes) | Full-width mono input (max 960 px) with a terminal icon inset on the left and the mic icon button on the right. Interpretation chips: 32 px, `--line-2` border, `bg-2`, a `label` slot name then the mono value; unset slots read "(unchanged)" in `--text-2`. Chips slide in left to right, 40 ms stagger. The clarification is a `bg-2` block with a 2 px cyan left bar. |
+| **Mic** (play modes) | Icon button with a 1 px `--line-1` border. While listening: icon and border cyan, and a ring that scales 1 → 1.35 and fades over 1.2 s, linear, looping (reduced motion: static ring). |
+| **Autopilot** (play modes) | Badge "AUTOPILOT · n / m" in fuji at 16% fill with the Lucide `bot` icon; MANUAL is a neutral tag. Plan rows: `bg-2`, number · game and reason · difficulty · source tag · break score (mono, right-aligned) · icon buttons; pinned rows get a 2 px fuji left bar. The next-game countdown is a 60 px ring, 2 px stroke, fuji (neutral `--text-2` while "Recovering DUT…"), emptying linearly; reduced motion shows the number only. |
 | **Level connector** | A 1 px line joining the level number badges in order. Segments after a `CLEARED` level are `--accent-hisui`; segments before a `LOCKED` level are `--line-2` and dashed (4 px dash, 4 px gap). |
 
 ### 4.8 Iconography
@@ -428,6 +438,7 @@ Hover applies only under `@media (hover: hover)`. `:focus-visible` always shows 
 | Game card / open level card | Border → `--accent-primary` at 60%; card lifts `translateY(-2px)`; JP sub-label fades from `--text-3` to `--text-2` | `translateY(0)` | 1 px cyan border + glow; 14% cyan tint; a 6 px cyan chamfer marker fills the top-left cut |
 | Cleared level card | As open level card | As open level card | As open level card; the `CLEARED` badge and check stay jade |
 | Locked level card | No lift, no border change; tooltip after 300 ms | — | Cannot be selected. Card content at 40% opacity (disabled rule); the lock icon and unlock hint stay at full `--text-2` so the reason is readable. |
+| Drop zone | Border → `--accent-primary`; 8% cyan fill (drag-over: 14%) | — | — |
 | Nav item | Text `--text-2` → `--text-1`; blade sweep underline at 40% opacity | — | Text `--text-1`; full blade underline in cyan, 2 px |
 | Table row | Fill → `--bg-3` | — | 2 px left bar in cyan |
 | Segmented control | Text → `--text-1` | — | Sliding cyan 14% tint indicator moves under the option (`--dur-base`, `--ease-inout`) |
@@ -528,5 +539,6 @@ Run this before merging any visual change:
 - [ ] Locked states are readable: the lock icon and unlock hint are never faded below `--text-2`.
 - [ ] 3GPP message names, workflow IDs and timers are mono and spelled exactly as in the workflow library.
 - [ ] Amber marks the tester's injection or a value to verify, never a failure; failure stays vermilion.
+- [ ] Network-model values use the neutral "Model" mark with the library value struck through beside them; never amber or vermilion.
 - [ ] In the trace, only wrong or missing DUT responses are vermilion; late is amber; as expected is jade.
 - [ ] The change still looks right on mobile (grain off, type steps down, 44 px tap targets).

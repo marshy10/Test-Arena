@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configData name="Vendor B · site 0471 export" vendor="Vendor B (fictional)">
+  <GNBDUFunction id="1">
+    <gNBId>4711</gNBId>
+    <NRCellDU id="Cell1"><attributes><nRPCI>201</nRPCI><nRTAC>310</nRTAC><ssbFrequency>630048</ssbFrequency></attributes></NRCellDU>
+    <NRCellDU id="Cell2"><attributes><nRPCI>202</nRPCI><nRTAC>310</nRTAC><ssbFrequency>630048</ssbFrequency></attributes></NRCellDU>
+    <NRCellDU id="Cell3"><attributes><nRPCI>203</nRPCI><nRTAC>311</nRTAC><ssbFrequency>630048</ssbFrequency></attributes></NRCellDU>
+  </GNBDUFunction>
+  <NRCellCU id="Cell1"><plmnInfoList><plmnId><mcc>999</mcc><mnc>99</mnc></plmnId><snssai><sst>2</sst></snssai></plmnInfoList></NRCellCU>
+  <vsDataContainer id="rrc-timers">
+    <p name="t300Timer" unit="ms">600</p>
+    <p name="t310">500 ms</p>
+    <p name="n310">6</p>
+    <p name="t311">7000</p>
+    <p name="raResponseWindowSize">sl40</p>
+    <p name="prachConfigIndex">16</p>
+    <p name="maxNumHarqTx">4</p>
+  </vsDataContainer>
+  <vsDataContainer id="mobility">
+    <p name="a3Offset" unit="dB">4</p>
+    <p name="hysteresisA3">2 dB</p>
+    <p name="timeToTriggerA3">640</p>
+  </vsDataContainer>
+  <vsDataContainer id="core">
+    <p name="periodicRegistrationTimer">54 min</p>
+    <p name="t3346">30 min</p>
+    <p name="imsVoiceOverPS">false</p>
+    <p name="n26Supported">true</p>
+  </vsDataContainer>
+</configData>

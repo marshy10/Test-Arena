@@ -1,0 +1,29 @@
+{
+ "schema": "test-arena.network-model",
+ "version": "1.0.0",
+ "name": "Operator A · dense urban n78",
+ "operator": "Operator A (fictional)",
+ "parameters": {
+  "plmn.mcc": "999",
+  "plmn.mnc": "70",
+  "cell1.pci": 101,
+  "cell2.pci": 102,
+  "cell3.pci": 103,
+  "ta1.tac": 4660,
+  "ta2.tac": 4661,
+  "sib1.t300": "ms2000",
+  "sib1.t310": "ms2000",
+  "sib1.n310": "n4",
+  "sib1.t311": "ms10000",
+  "ho.t304": "ms500",
+  "rrcReject.waitTime": 16,
+  "rach.preambleTransMax": "n8",
+  "rach.raResponseWindow": "sl10",
+  "a3.offset": 2,
+  "a3.hysteresis": 1,
+  "a3.timeToTrigger": "ms320",
+  "nas.t3346": 900,
+  "nas.t3512": 7200,
+  "slice.sst": 1
+ }
+}
